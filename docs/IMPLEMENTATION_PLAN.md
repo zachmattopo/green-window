@@ -107,6 +107,8 @@ Phases 5 and 6 are independent of each other once Phase 4 is merged.
 
 **Done when:** that test passes. Tie-break and postcode parsing go in the Phase 7 manual test plan.
 
+**Outcome (26 Nov 2026):** the test passes (10 rows: the nine above, with the clock-change row split in two). Timezone data uses `latest_10y` (67 KB, against 258 KB for `latest`). The fixture is `assets/fixtures/forecast_rg10.json` (RG10, South England, 96 slots from 11:00 UTC). On it, every preset gets a Wait about 45–47% cleaner than starting now, so the 10% / 10 g thresholds stay as they are.
+
 ### Phase 2: data layer (`phase-2/data`)
 - `forecast_parser.dart`: reads `data.shortname`, `data.data[].intensity.forecast` and `intensity.index` (an enum on `ForecastSlot`; missing or unknown → none, never dirty); drops invalid slots. A body of `null`, or `data: null`, → `NotFound`. Anything else unexpected → `ParseFailure`.
 - `carbon_intensity_client.dart`: `GET /regional/intensity/{from}/fw48h/postcode/{outcode}`, 10 s timeout and no retry on a timeout. 2 retries (1 s, 2 s) on network errors and 5xx. 400 → InvalidPostcode, 429 → RateLimited. The API returns 200 with `null`, not 400, for a well-formed outward code it doesn't know (checked live on 26 Nov 2026), so the parser handles that case.

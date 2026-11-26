@@ -53,3 +53,18 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 **Design review follow-up**
 - Feedback: the chart bars were too thin, and the purple for dirty hours was missing. Bars are now 22 px (14 px on mobile), and the chart scrolls sideways.
 - For "dirty" I didn't invent a threshold. The API's own `intensity.index` uses NESO's fixed bands, and high or very high now means dirty, checked live across four regions. That needed one parser field, which is in the PRD (§8.1) and plan (Phase 2). Purple fails contrast on the dark ground, so dirty bars get a Cobalt Green top edge rather than moving purple off them.
+
+## Phase 1: domain logic
+
+**Used for**
+- Writing `postcode.dart`, `london_time.dart`, `window_finder.dart` and the table-driven `window_finder_test.dart` from PRD §8.
+- Probing `package:timezone` on clock-change days before relying on it, and saving a live RG10 forecast as the fixture.
+
+**Changed or rejected**
+- The finder compares integer sums, not averages, so ties and the 10% / 10 g thresholds are exact rather than subject to floating-point error.
+- `nextReadyBy` fixes two clock-change cases itself. In autumn `TZDateTime` always picks the second 01:30, so it checks the first. In spring it shifts a skipped 01:30 to 02:30 BST, not 02:00, which would let a window finish 30 minutes past the deadline.
+- A self-review found the earliest finish ignored gaps (now + run time even when the "now" window spans a gap). It now uses the first gap-free window, as PRD §8.3 says.
+- Without a deadline, a "now" run that would finish past the forecast's end gives No forecast instead of crashing on a missing deadline.
+- Kept to one test file, as the plan says. Postcode parsing was checked once with a throwaway script, not committed.
+
+**Verified by hand:** *(to complete after review)*
