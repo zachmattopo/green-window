@@ -99,10 +99,6 @@ class ResultView extends StatelessWidget {
       _ => null,
     };
 
-    final retrying = switch (state.status) {
-      Failed(:final retrying) => retrying,
-      _ => false,
-    };
     final retry = FilledButton(
       onPressed: cubit.retry,
       child: const Text('Retry'),
@@ -232,52 +228,63 @@ class ResultView extends StatelessWidget {
       ],
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SlideIn(
-          child: state.status is Failed && state.forecast != null
-              ? Padding(
-                  key: const ValueKey('stale'),
-                  padding: EdgeInsets.only(top: compact ? 16 : 28),
-                  child: Wrap(
-                    spacing: 20,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        "Couldn't update. Showing the forecast from "
-                        '${clockLabel(state.forecast!.fetchedAt)}.',
-                        style: TextStyle(
-                          fontFamily: body,
-                          fontSize: compact ? 15 : 18,
-                          fontWeight: FontWeight.w500,
-                          color: purple,
-                        ),
-                      ),
-                      // Hidden while it retries; the notice itself stays put.
-                      Visibility(
-                        visible: !retrying,
-                        maintainSize: true,
-                        maintainAnimation: true,
-                        maintainState: true,
-                        child: retry,
-                      ),
-                    ],
+    return Padding(
+      padding: EdgeInsets.only(top: compact ? 40 : 24),
+      child: answer,
+    );
+  }
+}
+
+/// "Couldn't update…" with Retry, over a stale forecast (PRD §9). It slides
+/// in and out, and Retry hides (keeping its space) while it retries.
+class UpdateNotice extends StatelessWidget {
+  const UpdateNotice(this.state, {super.key});
+
+  final GreenWindowState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = isCompact(context);
+    final retrying = switch (state.status) {
+      Failed(:final retrying) => retrying,
+      _ => false,
+    };
+    final retry = FilledButton(
+      onPressed: context.read<GreenWindowCubit>().retry,
+      child: const Text('Retry'),
+    );
+    return SlideIn(
+      child: state.status is Failed && state.forecast != null
+          ? Padding(
+              key: const ValueKey('stale'),
+              padding: EdgeInsets.only(top: compact ? 16 : 28),
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    "Couldn't update. Showing the forecast from "
+                    '${clockLabel(state.forecast!.fetchedAt)}.',
+                    style: TextStyle(
+                      fontFamily: body,
+                      fontSize: compact ? 15 : 18,
+                      fontWeight: FontWeight.w500,
+                      color: purple,
+                    ),
                   ),
-                )
-              : null,
-        ),
-        Expanded(
-          child: Align(
-            alignment: compact ? Alignment.topLeft : Alignment.centerLeft,
-            child: Padding(
-              padding: EdgeInsets.only(top: compact ? 40 : 24),
-              child: answer,
-            ),
-          ),
-        ),
-      ],
+                  // Hidden while it retries; the notice itself stays put.
+                  Visibility(
+                    visible: !retrying,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: retry,
+                  ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 }

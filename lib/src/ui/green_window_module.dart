@@ -99,8 +99,7 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
             'CC BY 4.0',
             style: TextStyle(fontFamily: body, fontSize: compact ? 13 : 15),
           );
-          final hero = Column(
-            key: _top,
+          final top = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
@@ -129,12 +128,19 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
                   ),
                 },
               ),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: pad),
-                  child: ResultView(state),
-                ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: pad),
+                child: UpdateNotice(state),
               ),
+            ],
+          );
+          final answer = Padding(
+            padding: EdgeInsets.symmetric(horizontal: pad),
+            child: ResultView(state),
+          );
+          final foot = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               SizedBox(height: compact ? 24 : 40),
               // The foot keeps its height in every state, so the answer above
               // doesn't move when the forecast arrives or goes.
@@ -188,20 +194,44 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
               ),
             ],
           );
-          return CustomScrollView(
-            slivers: [
-              SliverFillRemaining(hasScrollBody: false, child: hero),
-              if (shown)
+          // At least a screen tall, growing with its content instead of
+          // overflowing. Desktop centres the answer between the inputs and
+          // the foot; mobile keeps it under the inputs.
+          final hero = Column(
+            key: _top,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: compact
+                ? [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [top, answer],
+                    ),
+                    foot,
+                  ]
+                : [top, answer, foot],
+          );
+          return LayoutBuilder(
+            builder: (context, viewport) => CustomScrollView(
+              slivers: [
                 SliverToBoxAdapter(
-                  child: ForecastSection(
-                    key: _below,
-                    forecast: forecast,
-                    outcome: outcome,
-                    now: state.now,
-                    onBack: () => _scrollTo(_top),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: viewport.maxHeight),
+                    child: hero,
                   ),
                 ),
-            ],
+                if (shown)
+                  SliverToBoxAdapter(
+                    child: ForecastSection(
+                      key: _below,
+                      forecast: forecast,
+                      outcome: outcome,
+                      now: state.now,
+                      onBack: () => _scrollTo(_top),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),
