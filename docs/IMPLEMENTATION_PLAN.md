@@ -8,19 +8,17 @@ Companion to [PRD.md](PRD.md). Each phase is one small PR into `main` (trunk-bas
 |---|---|
 | Flutter 3.50.1 via fvm | Pinned in `.fvmrc`, so every machine and CI builds the same SDK. |
 | `material_ui` | The Material library that the 3.50 template uses. |
-| `flutter_bloc` | One Cubit for the module: explicit states that are easy to test, and no events needed for a single screen. |
-| `http` | One GET endpoint. `MockClient` from `package:http/testing.dart` covers the client tests without extra packages. |
+| `flutter_bloc` | One Cubit for the module: explicit states, and no events needed for a single screen. |
+| `http` | One GET endpoint. |
 | `shared_preferences` | Persists the last good forecast per area and the last inputs. Async API, works on web. |
 | `timezone` | Explicit Europe/London conversion. Dart's `DateTime` only knows UTC and the browser's own zone. |
 | `clock` | `clock.now()` everywhere, so tests fix the time with `withClock`. Tiny, from the Dart team. |
-| `equatable` | Value equality for states and models, which `bloc_test` relies on. Avoids code generation. |
 | `reel_text` | Animated number changes (intensity, % cleaner). Used in Phase 6. |
 | `morphnext` | Animated icon changes (appliance, outcome). Used in Phase 6. |
-| `bloc_test` (dev) | Concise Cubit state-sequence tests. |
-| `mocktail` (dev) | Mocks the repository in Cubit tests. HTTP uses `MockClient` instead. |
+| `fl_chart` | The 48-hour intensity chart with the window and deadline marked. Used in Phase 6. |
 | `flutter_lints` (dev) | Template default, plus a few stricter rules in `analysis_options.yaml`. |
 
-Deliberately left out: get_it/injectable (one screen, so constructor injection is enough), freezed/json_serializable (sealed classes and a hand-written parser are short and need no build step), dio (one GET; `http` plus a small retry loop is enough), go_router (no navigation), and a charting package (one bar chart via `CustomPainter`, decided in Phase 6 with the design).
+Deliberately left out: get_it/injectable (one screen, so constructor injection is enough), freezed/json_serializable (sealed classes and a hand-written parser are short and need no build step), dio (one GET; `http` plus a small retry loop is enough), go_router (no navigation), and bloc_test, mocktail and equatable (the two tests below are pure functions, so nothing needs mocking or state comparison).
 
 ## Architecture
 
@@ -50,16 +48,25 @@ test/                        mirrors lib/src/
 
 Data flows one way: UI → Cubit → Repository → Client/Cache. The Cubit calls the pure `findGreenWindow` on the forecast it holds, so changing the appliance or ready-by time recalculates without a request.
 
+## Testing approach
+
+There are **two unit tests**, one for each way this module could do real damage:
+
+1. **Wrong advice**: `findGreenWindow` (Phase 1). If it breaks, people run appliances at the wrong time, and nothing on screen looks wrong.
+2. **A bad payload**: the forecast parser (Phase 2). If it breaks, one odd API response takes down the module for every user.
+
+Everything else (retries, caching, races, UI states, copy, chart, demo mode) is checked by hand with the manual test plan in Phase 7, using `?demo=` to reproduce each failure. Those checks are listed in the README as what I'd automate next. There's no coverage target.
+
 ## Phases
 
 | # | PR | Adds | Est. lines (src + tests) | Depends on |
 |---|---|---|---|---|
 | 0 | Setup and planning | Tooling, docs, CI | ~150 + docs | — |
-| 1 | Domain logic | §8 of the PRD | ~300 + ~500 | 0 |
-| 2 | Data layer | §10 of the PRD | ~300 + ~400 | 1 |
-| 3 | State | Cubit, persistence | ~250 + ~350 | 2 |
-| 4 | Functional UI | §9 states, a11y, unstyled | ~400 + ~250 | 3 |
-| 5 | Demo mode and hosting | §12, GitHub Pages | ~150 + ~100 | 4 |
+| 1 | Domain logic | §8 of the PRD | ~300 + ~80 | 0 |
+| 2 | Data layer | §10 of the PRD | ~300 + ~40 | 1 |
+| 3 | State | Cubit, persistence | ~250 | 2 |
+| 4 | Functional UI | §9 states, a11y, unstyled | ~400 | 3 |
+| 5 | Demo mode and hosting | §12, GitHub Pages | ~150 | 4 |
 | 6 | Design and motion | Your wireframes, chart, animations | ~600–900 (may split 6a/6b) | 4, design |
 | 7 | Docs and QA | README, test plan, limitations | Docs | 5, 6 |
 
@@ -83,42 +90,43 @@ Phases 5 and 6 are independent of each other once Phase 4 is merged.
 - `postcode.dart`: normalise (trim, uppercase, collapse spaces) → outward code; regex validation; BT/GY/JE/IM → NotCovered.
 - `london_time.dart`: `toLondon`, `dayLabel(start, now)`, `nextReadyBy(hh, mm, now)` including clock-change days.
 - `window_finder.dart`: candidate windows, gaps, ready-by filter, forecast-end limit, tie-break, baseline, the four outcomes, flat thresholds.
-- Fixtures: a saved real 48-hour regional response, and a hand-built forecast spanning 28 March 2027 01:00 (clocks go forward).
+- Fixture: a saved real 48-hour regional response (also used by demo mode).
+- Delete the Phase 0 smoke test, which only checked the placeholder screen.
 
-**Tests (table-driven):**
-- postcodes: full, outward, lowercase, spaces, invalid, BT
-- windows: run time not a whole number of slots, gap inside a window, window running past the forecast, deadline too soon, deadline past the forecast, a tie, a flat day, a baseline of 0, a gap at the current slot
-- day labels across midnight and across the clock change
-- "ready by" on 28 March 2027 and 31 October 2027
+**Test 1: `window_finder_test.dart`**, a single table-driven test. Each row is a case where a bug would give the user a wrong time:
+- a gap inside a window is never used
+- a window that ends after the ready-by time is never picked
+- a deadline too soon gives Not enough time
+- a flat day gives Start now, not a fake saving
 
-**Done when:** every rule in PRD §8 has at least one test that would fail if the rule broke.
+**Done when:** that test passes. The other rules (tie-break, day labels, clock change, postcode parsing) go in the Phase 7 manual test plan.
 
 ### Phase 2: data layer (`phase-2/data`)
 - `forecast_parser.dart`: reads `data.shortname` and `data.data[]`; drops invalid slots; anything else unexpected → `ParseFailure`.
-- `carbon_intensity_client.dart`: `GET /regional/intensity/{from}/fw48h/postcode/{outcode}`, 10 s timeout, 2 retries (1 s, 2 s) on network, timeout and 5xx; 400 → NotFound, 429 → RateLimited. The delay is injectable, so tests run instantly.
+- `carbon_intensity_client.dart`: `GET /regional/intensity/{from}/fw48h/postcode/{outcode}`, 10 s timeout, 2 retries (1 s, 2 s) on network, timeout and 5xx; 400 → NotFound, 429 → RateLimited.
 - `forecast_cache.dart`: JSON in `SharedPreferencesAsync`, keyed by outward code, with `fetchedAt`; stores the last inputs.
 - `forecast_repository.dart`: `cached(outcode)` and `fetch(outcode)`; a successful fetch writes the cache.
 - Check the GY/JE/IM assumption against the live API and update the PRD.
 
-**Tests:** `MockClient` for each row in PRD §10, including the retry count and order, plus a cache round-trip and a corrupt-cache entry, which must be ignored rather than crash.
+**Test 2: `forecast_parser_test.dart`.** A garbled payload gives `ParseFailure`, and a response with some bad slots keeps the good ones. Retries, status mapping and the cache are checked by hand with `?demo=`.
 
 ### Phase 3: state (`phase-3/state`)
 - `GreenWindowState`: inputs (outcode, appliance, readyBy) plus a sealed status: Idle, Loading(cached?), Ready(outcome, forecast, fetchedAt, refreshing), Failed(failure, cached?).
 - `GreenWindowCubit`: `restore()`, `submitPostcode()`, `selectAppliance()`, `setReadyBy()`, `retry()`. Uses the cache first, then refreshes. Changing the appliance or ready-by time recalculates without a fetch. Refetches if the forecast is over 30 minutes old. **Latest request wins**: each fetch gets an id, and stale completions are ignored.
 
-**Tests (`bloc_test` + `mocktail`):** cold load, cached then fresh, cached then failure, out-of-order responses, invalid postcode (no fetch), recalculation without a fetch, inputs restored.
+**Tests:** none. Latest-request-wins and stale-on-failure are in the manual test plan (`?demo=slow`, `?demo=error`).
 
 ### Phase 4: functional UI (`phase-4/ui`)
 - An unstyled Material module: postcode field (Enter submits), appliance choice, ready-by picker with clear, and result area for every PRD §9 state. A plain-text 48-hour list stands in for the chart until Phase 6.
 - A sentence-style Semantics label for the result; visible focus; logical tab order; data attribution.
 
-**Tests (widget):** error → Retry → result; Start-now copy; Not-enough-time → "Plan for tomorrow"; BT message; keyboard submit.
+**Tests:** none. Every §9 state is in the manual test plan.
 
 ### Phase 5: demo mode and hosting (`phase-5/demo-hosting`)
 - `?demo=fixture|slow|error|garbled|offline` swaps in an `http.BaseClient` from `data/demo/`; `fixture` also fixes the clock. A banner shows the active mode.
 - `.github/workflows/deploy.yml`: on push to `main`, `flutter build web --wasm --release --base-href /green-window/`, then deploy to GitHub Pages. (You enable Pages → "GitHub Actions" in the repo settings once.)
 
-**Tests:** each demo client produces the expected failure type.
+**Tests:** none. Demo mode is itself a manual QA tool, checked by hand in each mode.
 
 **Done when:** the live URL works in Chrome, Safari and Firefox, and in each demo mode.
 
@@ -127,7 +135,7 @@ Blocked on your wireframes.
 - Theme and layout from the design.
 - 48-hour chart with the window and deadline marked.
 - `reel_text` for the percentage and intensity values, `morphnext` for the appliance and outcome icons. Both respect reduce-motion.
-- Golden or widget tests for the chart's highlighted range.
+- No new tests: the chart and motion are presentation, checked by hand. The window they show is already covered in Phase 1.
 
 ### Phase 7: docs and QA (`phase-7/docs`)
 - README: what it is and the live link; track and API, and why; architecture and trade-offs; how to run (fvm, `--wasm`); test and QA approach; a manual test plan derived from PRD §9, §10 and §12; known limitations; AI usage (links AI_LOG); screenshots.

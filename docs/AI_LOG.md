@@ -12,6 +12,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 **Changed or rejected**
 - Rejected the painting-explainer idea: the data says *what* is in a painting, rarely *why*.
 - Found the WWF Carbon Gizmo on the API's homepage. Kept the idea but repositioned it around region, appliance run time, a 48-hour look-ahead and a "ready by" deadline, using live data to show where the national widget misleads.
+- Cut the AI-drafted test plan, which tested almost every rule, to two unit tests (window finder, parser), following the brief's "a test or two". Dropped bloc_test, mocktail and equatable, which only those extra tests needed.
 - Took the council's advice not to bring my usual production stack (get_it, injectable, freezed, drift). It's too heavy for one module.
 
 **Verified by hand:** *(to complete after review)*

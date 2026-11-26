@@ -207,7 +207,7 @@ A visible banner names the active demo mode, so it can never be mistaken for liv
 ## 13. Success criteria
 
 These map to the brief's grading:
-- The window logic in §8 is covered by table-driven tests, including a clock change (28 March 2027), gaps, deadlines, flat days and ties.
+- Two unit tests cover the logic that would do the most damage if it broke: the window finder (gaps, deadlines, flat days) and the forecast parser (bad payloads). Everything else is in the manual test plan.
 - Every row in §9 and §10 can be reproduced from the manual test plan using §12.
 - The README covers why this API, the architecture and its trade-offs, the test and QA approach, the manual test plan, known limitations and an AI usage log.
 - The live demo works from the hosted URL, with `?demo=fixture` as a fallback.
