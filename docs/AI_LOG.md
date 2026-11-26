@@ -102,3 +102,22 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - A self-review found that a refresh returning no usable slots replaced a good result with "No forecast" for 30 minutes. It now shows the error with the last good forecast, as the cache already does.
 
 **Verified by hand:** *(to complete after review)*
+
+## Phase 4: functional UI
+
+**Used for**
+- Writing the unstyled module, the result view with the PRD §8.5, §9 and §10 copy, and `main.dart`'s wiring.
+- Adding `skippedDeadline` to `findGreenWindow` for "Plan for {deadline} tomorrow".
+- Checking postcode errors and a live result in Chrome on the Wasm build.
+
+**Changed or rejected**
+- "Plan for tomorrow" is an instant in the state (the missed deadline), not a "tomorrow" flag. A flag would push the deadline a day too far once today's deadline had passed. The deadline isn't saved with the last inputs: it's a one-off.
+- The one-hour skip is in the domain function, not the Cubit. Without it, "tomorrow" on 31 Oct 2027 would give the second 01:30 that same night. A test for this was written and checked to fail without the fix, then left out: it only matters one night a year, so it's left for later test work.
+- The ready-by picker is a plain `DropdownButton`, not a `DropdownButtonFormField`. The form field only reads its value once, so the time `restore()` brings back after the first frame wouldn't show.
+- Appliances are chips in a `Wrap`, not a `SegmentedButton`, which overflowed on a phone with "EV charge (top-up)".
+- The restored postcode fills the field only if it's empty, so it never overwrites what the user is typing.
+- Checking keyboard use in Chrome showed Material's focus overlay was too faint on unselected chips to see. `main.dart`'s theme adds a 3 px border on focus to chips and filled and outlined buttons. Phase 6 restyles it.
+- A self-review found three problems, now fixed. Retry was hidden when a refresh failed while the cached result said Not enough time. The restored postcode could miss the field if it arrived before the first build. And the result, as a live region, was read out every minute in Not enough time, because the earliest finish moves with the clock. It's now announced only when the status or an input changes.
+
+**Verified by hand:** *(to complete after review)*
+
