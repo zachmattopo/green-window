@@ -4,7 +4,7 @@
 |---|---|
 | Status | Draft for review |
 | Owner | Hafiz (product and engineering) |
-| Last updated | 25 November 2026 |
+| Last updated | 26 November 2026 |
 | Design | Pending: wireframes to follow. This document fixes behaviour and copy, not layout or theme. |
 
 ## 1. Summary
@@ -75,12 +75,14 @@ Out of target: Northern Ireland, which is on a separate grid that the API doesn'
 - If there isn't enough time before then, I'm told so, shown the earliest possible finish, and offered "Plan for 07:00 tomorrow".
 
 **US-3 Honest flat days.** As a user, I'm told when waiting isn't worth it.
-- If the best window is less than 10% cleaner than starting now, or less than 10 gCO2/kWh cleaner, I see "Start whenever suits you. Waiting won't make a meaningful difference."
+- If the best window is less than 10% cleaner than starting now, or less than 10 gCO2/kWh cleaner, I see "Start now. Waiting won't make it meaningfully cleaner."
+- I'm never told to start "whenever": later windows can be much dirtier than now, and a later start can miss my ready-by time.
 
 **US-4 Postcode help.** As a user, I get a clear message when my postcode can't be used.
 - Full or partial postcodes are accepted in any case and spacing ("rg10 9xy", "RG10").
 - A postcode that isn't a UK format gets "That doesn't look like a UK postcode."
 - BT postcodes get "Northern Ireland is on a separate grid, so it isn't covered by this forecast."
+- GY, JE and IM postcodes get "The Channel Islands and the Isle of Man aren't covered by this forecast." These are blocked in the app, before any request (§15).
 - A postcode the API doesn't recognise gets "We couldn't find that postcode area."
 
 **US-5 It remembers me.** My last postcode, appliance and ready-by time are restored when I come back.
@@ -122,26 +124,31 @@ This section is the spec for the domain logic and its tests.
 - Slots are consecutive only if each one's `from` equals the previous one's `to`. A window never spans a gap.
 - Candidate windows start at the current slot (shown as "now") or at any later slot start.
 - A window must end on or before the end of the last usable slot, so it never runs past the forecast.
+- A window's **finish** is its start plus the appliance run time. The window in the current slot starts **now**, not at the slot's start, so its finish is now + run time. For example, at 04:55 a 2-hour wash in the 04:30 slot finishes at 06:55, not 06:30. The deadline check (§8.3), the "Ready by" time shown and the earliest finish all use the finish.
 
 ### 8.3 Ready by
-- "Ready by HH:MM" becomes the next HH:MM in Europe/London strictly after now, using real wall-clock time (on clock-change days, a time that doesn't exist that day moves forward to the next valid time).
-- Only windows whose end is at or before that deadline are candidates.
+- "Ready by HH:MM" becomes the next HH:MM in Europe/London strictly after now, using real wall-clock time. On clock-change days:
+  - March: 01:00 and 01:30 don't exist, so both become 02:00.
+  - October: 01:00 and 01:30 happen twice, so the **first** one is used (the earlier deadline, so it's never missed).
+- Only windows whose finish (§8.2) is at or before that deadline are candidates.
 - If the deadline is later than the end of the forecast, the forecast end is used instead and the answer says "Forecast only runs until {time}".
-- If no candidate exists because the deadline is too soon, the result is **Not enough time**, with the earliest possible finish (current slot start + run time).
+- If gap-free windows exist but none finishes by the deadline, the result is **Not enough time**, with the earliest possible finish: the finish of the earliest gap-free window.
 
 ### 8.4 Choosing
 - Score = the average `forecast` across the window's slots.
 - Pick the lowest score. On a tie, pick the **earliest** window, so it's ready sooner.
-- **Baseline** = the score of the window starting at the current slot. If that window is invalid (a gap or not enough data), there is no baseline, and the comparison line is hidden.
+- **Baseline** = the score of the window starting at the current slot. If that window is invalid (a gap or not enough data), there is no baseline: the outcome is Wait, without the "{p}% cleaner" part.
 
 ### 8.5 Outcome types
 
+Checked in this order; the first that matches wins.
+
 | Outcome | When | Headline copy |
 |---|---|---|
-| **Wait** | Best ≠ baseline and the saving is ≥ 10% and ≥ 10 gCO2/kWh | "Start at {time} {day}. Ready by {end}. {p}% cleaner than starting now." |
-| **Start now** | The best window is the baseline, or the saving is below either threshold | "Start whenever suits you. Waiting won't make a meaningful difference." |
-| **Not enough time** | A ready-by time is set and no window fits before it | "There isn't time to finish before {deadline}. The earliest finish is {time}." Action: "Plan for {deadline} tomorrow". |
-| **No forecast** | Fewer usable slots ahead than the appliance needs | "There isn't enough forecast data to plan this right now." Action: Retry. |
+| **No forecast** | No gap-free window of the appliance's length exists anywhere in the forecast, whatever the deadline | "There isn't enough forecast data to plan this right now." Action: Retry. |
+| **Not enough time** | A ready-by time is set, gap-free windows exist, and none finishes by the deadline | "There isn't time to finish before {deadline}. The earliest finish is {time}." Action: "Plan for {deadline} tomorrow". |
+| **Wait** | There is no baseline, or best ≠ baseline and the saving is ≥ 10% and ≥ 10 gCO2/kWh | "Start at {time} {day}. Ready by {end}. {p}% cleaner than starting now." With no baseline, the last sentence is left out. |
+| **Start now** | Otherwise: the best window is the baseline, or the saving is below either threshold | "Start now. Waiting won't make it meaningfully cleaner." |
 
 The percentage is `(baseline − best) / baseline`, rounded down to a whole number. If the baseline is 0, the outcome is always Start now. Copy says "cleaner", never "you'll save X kg" or "halve your emissions", because the forecast is average grid intensity, not the marginal emissions of the user's appliance.
 
@@ -169,13 +176,16 @@ Times are shown in 24-hour format ("03:00"), and the weekday is always available
 
 Changing the appliance or the ready-by time recalculates from the forecast already loaded, without a new request. Only a new postcode, Retry, or a forecast older than 30 minutes triggers a fetch.
 
+While the module is open, the result is recalculated every minute and whenever the tab becomes visible again, so it never shows a start time that has already passed. The same check fetches again when the forecast is older than 30 minutes.
+
 ## 10. Resilience requirements
 
 | Situation | Behaviour |
 |---|---|
-| Slow response | Time out after 10 s, then treat as a network failure. |
-| Network failure, timeout or 5xx | Retry up to 2 times, after 1 s and then 2 s. Then fail with "Couldn't reach the forecast service." |
-| 400 "No postcode match" | No retry. "We couldn't find that postcode area." |
+| Slow response | Time out after 10 s. No retry, since a retry would keep the user waiting up to 33 s. Fail with "Couldn't reach the forecast service." |
+| Network failure or 5xx | Retry up to 2 times, after 1 s and then 2 s. Then fail with "Couldn't reach the forecast service." |
+| Unknown postcode: HTTP 200 with the body `null`, or `data` set to `null` | No retry. "We couldn't find that postcode area." (Checked live on 26 Nov 2026: the API doesn't send 400 for a well-formed outward code it doesn't know.) |
+| 400 (badly formed outward code) | No retry. "That doesn't look like a UK postcode." Rare, since the app checks the format first. |
 | 429 | No retry. "The forecast service is busy. Try again in a minute." |
 | Malformed JSON or unexpected shape | No retry. Treat as a failure: "The forecast service sent something we couldn't read." Never crash. |
 | Some bad slots | Drop them (§8.1) and carry on with what's valid. |
@@ -197,7 +207,8 @@ For a reliable live demo and manual testing, a `demo` URL parameter swaps the ne
 | `?demo=` | Behaviour |
 |---|---|
 | `fixture` | Serves a saved real response and fixes the clock to its capture time |
-| `slow` | Adds a 12 s delay, so the request times out |
+| `slow` | Adds a 12 s delay to the **first** request only, so it times out. A second search made straight after finishes first, which shows that only the latest request's result is shown. |
+| `busy` | Returns HTTP 429 |
 | `error` | Returns HTTP 500 |
 | `garbled` | Returns invalid JSON |
 | `offline` | Throws a network error |
@@ -219,5 +230,5 @@ Custom durations, notifications when the window opens, a phone home-screen widge
 ## 15. Assumptions and open questions
 
 - **Assumption:** the 10% / 10 gCO2/kWh "meaningful difference" thresholds are a product judgement and will be tuned against real data in Phase 1.
-- **Assumption:** GY, JE and IM postcodes aren't covered. To verify against the API in Phase 2.
+- **Checked (26 Nov 2026):** BT, GY and JE outward codes return HTTP 200 with the body `null`. IM returns North West England's forecast, which is wrong for the Isle of Man's own grid. So the app blocks all four before sending a request (US-4).
 - **Open:** layout, theme, chart style and motion. These come from the wireframes and land in Phase 6.
