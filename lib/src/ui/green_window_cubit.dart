@@ -113,7 +113,15 @@ class GreenWindowCubit extends Cubit<GreenWindowState> {
       state.copyWith(
         now: _now(),
         outcode: outcode,
-        status: held == null ? const Loading() : Ready(held, refreshing: true),
+        status: switch (state.status) {
+          _ when held == null => const Loading(),
+          // A retry keeps the failure up until it's replaced, so the notice
+          // doesn't leave and come back. Only for the same area: a new one
+          // hasn't failed.
+          Failed(:final failure) when force && outcode == state.outcode =>
+            Failed(failure, stale: held, retrying: true),
+          _ => Ready(held, refreshing: true),
+        },
       ),
     );
 

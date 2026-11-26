@@ -9,6 +9,7 @@ import '../../domain/window_finder.dart';
 import '../green_window_cubit.dart';
 import '../green_window_state.dart';
 import '../theme.dart';
+import 'slide_in.dart';
 
 const _blank = '--:--';
 
@@ -29,9 +30,21 @@ class ResultView extends StatelessWidget {
     final outcome = state.outcome;
     final region = state.forecast?.region.toUpperCase();
 
+    final timeStyle = TextStyle(
+      fontSize: compact ? 140 : 315 * k,
+      fontWeight: FontWeight.w700,
+      height: 0.82,
+      color: slate,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final dayStyle = TextStyle(
+      fontSize: compact ? 48 : 99 * k,
+      fontWeight: FontWeight.w500,
+      height: 0.9,
+    );
     final (icon, big, day) = switch ((state.status, outcome)) {
       (Idle(), _) => (Icons.eco, _blank, ''),
-      (Loading(), _) => (Icons.hourglass_empty, _blank, ''),
+      (Loading(), _) => (Icons.hourglass_empty, _blank, 'Loading'),
       (_, Wait(:final best, :final day)) => (
         Icons.schedule,
         clockLabel(best.start),
@@ -86,6 +99,10 @@ class ResultView extends StatelessWidget {
       _ => null,
     };
 
+    final retrying = switch (state.status) {
+      Failed(:final retrying) => retrying,
+      _ => false,
+    };
     final retry = FilledButton(
       onPressed: cubit.retry,
       child: const Text('Retry'),
@@ -100,6 +117,31 @@ class ResultView extends StatelessWidget {
       null when state.status is Failed => retry,
       _ => null,
     };
+
+    // The time and the day word sit in the same place in every state: the
+    // time is at least as wide as "00:00", and the day word's line is there
+    // even when it's empty.
+    final time = Stack(
+      children: [
+        Visibility(
+          visible: false,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: Text('00:00', style: timeStyle),
+        ),
+        _BigTime(big, waiting: state.status is Loading, style: timeStyle),
+      ],
+    );
+    final dayWord = SizedBox(
+      height: dayStyle.fontSize! * dayStyle.height!,
+      // Shrinks a long day word on a narrow window rather than wrapping it.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.bottomLeft,
+        child: ReelText(day, style: dayStyle),
+      ),
+    );
 
     final answer = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,36 +174,25 @@ class ResultView extends StatelessWidget {
                 ],
               ),
               SizedBox(height: compact ? 10 : 14 * k),
-              Wrap(
-                spacing: 36 * k,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.end,
-                children: [
-                  _BigTime(
-                    big,
-                    waiting: state.status is Loading,
-                    style: TextStyle(
-                      fontSize: compact ? 140 : 315 * k,
-                      fontWeight: FontWeight.w700,
-                      height: 0.82,
-                      color: big == _blank ? greenBlue : slate,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  if (day.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.only(bottom: compact ? 0 : 27 * k),
-                      child: ReelText(
-                        day,
-                        style: TextStyle(
-                          fontSize: compact ? 48 : 99 * k,
-                          fontWeight: FontWeight.w500,
-                          height: 0.9,
-                        ),
+              if (compact)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [time, const SizedBox(height: 12), dayWord],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    time,
+                    SizedBox(width: 36 * k),
+                    Flexible(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 27 * k),
+                        child: dayWord,
                       ),
                     ),
-                ],
-              ),
+                  ],
+                ),
               SizedBox(height: compact ? 18 : 20 * k),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1200),
@@ -188,38 +219,55 @@ class ResultView extends StatelessWidget {
             ],
           ),
         ),
-        if (action != null) ...[
-          SizedBox(height: compact ? 20 : 28 * k),
-          action,
-        ],
+        // The button's space is kept in every state, so the answer doesn't
+        // move when Retry or "Plan for…" comes and goes.
+        SizedBox(height: compact ? 20 : 28 * k),
+        Visibility(
+          visible: action != null,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: action ?? retry,
+        ),
       ],
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (state.status case Failed(stale: _?))
-          Padding(
-            padding: EdgeInsets.only(top: compact ? 16 : 28),
-            child: Wrap(
-              spacing: 20,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  "Couldn't update. Showing the forecast from "
-                  '${clockLabel(state.forecast!.fetchedAt)}.',
-                  style: TextStyle(
-                    fontFamily: body,
-                    fontSize: compact ? 15 : 18,
-                    fontWeight: FontWeight.w500,
-                    color: purple,
+        SlideIn(
+          child: state.status is Failed && state.forecast != null
+              ? Padding(
+                  key: const ValueKey('stale'),
+                  padding: EdgeInsets.only(top: compact ? 16 : 28),
+                  child: Wrap(
+                    spacing: 20,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        "Couldn't update. Showing the forecast from "
+                        '${clockLabel(state.forecast!.fetchedAt)}.',
+                        style: TextStyle(
+                          fontFamily: body,
+                          fontSize: compact ? 15 : 18,
+                          fontWeight: FontWeight.w500,
+                          color: purple,
+                        ),
+                      ),
+                      // Hidden while it retries; the notice itself stays put.
+                      Visibility(
+                        visible: !retrying,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: retry,
+                      ),
+                    ],
                   ),
-                ),
-                retry,
-              ],
-            ),
-          ),
+                )
+              : null,
+        ),
         Expanded(
           child: Align(
             alignment: compact ? Alignment.topLeft : Alignment.centerLeft,
@@ -313,7 +361,8 @@ List<String> _lines(GreenWindowState state) {
       'Forecast only runs until ${clockLabel(forecastEnd)}.',
     state.forecast!.region,
     'Forecast updated $updated.',
-    if (state.status case Ready(refreshing: true)) 'Updating…',
+    if (state.status case Ready(refreshing: true) || Failed(retrying: true))
+      'Updating…',
     if (state.status is Failed)
       "Couldn't update. Showing the forecast from $updated.",
   ];

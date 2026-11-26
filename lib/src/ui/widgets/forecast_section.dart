@@ -89,13 +89,14 @@ class ForecastSection extends StatelessWidget {
         style: TextStyle(fontSize: compact ? 15 : 20, height: 1.5),
       ),
       SizedBox(height: compact ? 14 : 32),
-      Align(
-        alignment: Alignment.centerLeft,
+      // Shifted by its padding, so the text lines up with the figures above.
+      Transform.translate(
+        offset: const Offset(-16, 0),
         child: TextButton(
           onPressed: onBack,
           style: TextButton.styleFrom(
             foregroundColor: cobalt,
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
           ).copyWith(side: focusRing(cobalt)),
           child: Text(
             'BACK TO THE ANSWER ↑',
@@ -379,7 +380,28 @@ class _ChartState extends State<_Chart> {
       ),
     );
 
-    return Row(
+    // The day of the leftmost bar in view, so a scrolled chart keeps its
+    // context. The axis still marks each midnight.
+    final day = ListenableBuilder(
+      listenable: _scroll,
+      builder: (context, _) {
+        final offset = _scroll.hasClients ? _scroll.offset : 0.0;
+        final i = (offset / (barWidth + gap)).floor();
+        return Text(
+          slots.isEmpty
+              ? ''
+              : weekdayName(slots[i.clamp(0, slots.length - 1)].from)
+                    .toUpperCase(),
+          style: TextStyle(
+            fontSize: compact ? 15 : 18,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.8,
+          ),
+        );
+      },
+    );
+
+    final chart = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ExcludeSemantics(
@@ -429,6 +451,17 @@ class _ChartState extends State<_Chart> {
             ),
           ),
         ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 46), // over the scroll area
+          child: ExcludeSemantics(child: day),
+        ),
+        const SizedBox(height: 8),
+        chart,
       ],
     );
   }

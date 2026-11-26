@@ -27,10 +27,12 @@ final class Ready extends GreenWindowStatus {
 }
 
 /// The fetch failed. [stale] is the last good forecast, if still usable.
+/// [retrying] marks a retry in flight, so the failure stays on screen.
 final class Failed extends GreenWindowStatus {
-  const Failed(this.failure, {this.stale});
+  const Failed(this.failure, {this.stale, this.retrying = false});
   final ForecastFailure failure;
   final Forecast? stale;
+  final bool retrying;
 }
 
 class GreenWindowState {

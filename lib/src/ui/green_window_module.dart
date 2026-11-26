@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:morphnext/morphnext.dart';
@@ -15,6 +16,7 @@ import 'theme.dart';
 import 'widgets/forecast_section.dart';
 import 'widgets/intensity_line.dart';
 import 'widgets/result_view.dart';
+import 'widgets/slide_in.dart';
 
 /// Every half hour of the day, for the ready-by picker (PRD §7).
 final _readyByTimes = [
@@ -85,6 +87,7 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
           final pad = compact ? 20.0 : 54.0;
           final forecast = state.forecast;
           final outcome = state.outcome;
+          final shown = forecast != null && outcome != null;
           final footer = TextStyle(
             fontFamily: condensed,
             fontSize: compact ? 14 : 24,
@@ -104,23 +107,28 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
                 padding: EdgeInsets.fromLTRB(pad, compact ? 20 : 36, pad, 0),
                 child: _inputs(context, state, compact),
               ),
-              if (_postcodeMessage(state.postcodeProblem) case final message?)
-                Padding(
-                  padding: EdgeInsets.fromLTRB(pad, 10, pad, 0),
-                  child: Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      message,
-                      textAlign: compact ? TextAlign.start : TextAlign.end,
-                      style: TextStyle(
-                        fontFamily: body,
-                        fontSize: compact ? 16 : 18,
-                        fontWeight: FontWeight.w500,
-                        color: purple,
+              SlideIn(
+                child: switch (_postcodeMessage(state.postcodeProblem)) {
+                  null => null,
+                  final message => Padding(
+                    key: ValueKey(message),
+                    padding: EdgeInsets.fromLTRB(pad, 10, pad, 0),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        message,
+                        textAlign: compact ? TextAlign.start : TextAlign.end,
+                        style: TextStyle(
+                          fontFamily: body,
+                          fontSize: compact ? 16 : 18,
+                          fontWeight: FontWeight.w500,
+                          color: purple,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                },
+              ),
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: pad),
@@ -128,54 +136,62 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
                 ),
               ),
               SizedBox(height: compact ? 24 : 40),
-              if (forecast != null && outcome != null) ...[
-                IntensityLine(
-                  slots: slotsAhead(forecast, state.now),
-                  window: windowOf(outcome),
-                  deadline: deadlineOf(outcome),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(pad, 4, pad, 8),
-                  child: DefaultTextStyle.merge(
-                    style: footer,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            [
-                              'NOW',
-                              compact
-                                  ? 'NEXT 48 H'
-                                  : 'GRID CARBON INTENSITY, NEXT 48 H',
-                              if (state.status case Ready(refreshing: true))
-                                'UPDATING…'
-                              else
-                                'UPDATED ${clockLabel(forecast.fetchedAt)}',
-                            ].join(' · '),
-                          ),
-                        ),
-                        TextButton(
+              // The foot keeps its height in every state, so the answer above
+              // doesn't move when the forecast arrives or goes.
+              IntensityLine(
+                slots: shown ? slotsAhead(forecast, state.now) : const [],
+                window: shown ? windowOf(outcome) : null,
+                deadline: shown ? deadlineOf(outcome) : null,
+              ),
+              Padding(
+                // The link's padding sits in the margin, so its text still
+                // lines up with the edge.
+                padding: EdgeInsets.fromLTRB(pad, 4, pad - 16, 8),
+                child: DefaultTextStyle.merge(
+                  style: footer,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: !shown
+                            ? attribution
+                            : Text(
+                                [
+                                  'NOW',
+                                  compact
+                                      ? 'NEXT 48 H'
+                                      : 'GRID CARBON INTENSITY, NEXT 48 H',
+                                  if (state.status
+                                      case Ready(refreshing: true) ||
+                                          Failed(retrying: true))
+                                    'UPDATING…'
+                                  else
+                                    'UPDATED ${clockLabel(forecast.fetchedAt)}',
+                                ].join(' · '),
+                              ),
+                      ),
+                      Visibility(
+                        visible: shown,
+                        maintainSize: true,
+                        maintainAnimation: true,
+                        maintainState: true,
+                        child: TextButton(
                           onPressed: () => _scrollTo(_below),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                           ),
                           child: Text('SEE THE FORECAST ↓', style: footer),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ] else
-                Padding(
-                  padding: EdgeInsets.fromLTRB(pad, 0, pad, 16),
-                  child: attribution,
-                ),
+              ),
             ],
           );
           return CustomScrollView(
             slivers: [
               SliverFillRemaining(hasScrollBody: false, child: hero),
-              if (forecast != null && outcome != null)
+              if (shown)
                 SliverToBoxAdapter(
                   child: ForecastSection(
                     key: _below,
@@ -214,14 +230,17 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
       borderRadius: BorderRadius.circular(999),
       borderSide: BorderSide(color: error ? purple : slate, width: width),
     );
-    Widget pill(Widget child) => Container(
+    // The stadium clips the dropdown's ink, so hover and focus fill the pill.
+    Widget pill(Widget child) => SizedBox(
       height: height,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 24),
-      decoration: const ShapeDecoration(
-        shape: StadiumBorder(side: BorderSide(color: slate, width: 2)),
+      child: Material(
+        type: MaterialType.transparency,
+        shape: const StadiumBorder(side: BorderSide(color: slate, width: 2)),
+        clipBehavior: Clip.antiAlias,
+        child: DropdownButtonHideUnderline(child: child),
       ),
-      child: DropdownButtonHideUnderline(child: child),
     );
+    final inside = EdgeInsets.symmetric(horizontal: compact ? 14 : 24);
     final arrow = Icon(Icons.arrow_drop_down, color: slate, size: size);
 
     final pills = [
@@ -248,38 +267,48 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
             ),
             autocorrect: false,
             textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              TextInputFormatter.withFunction(
+                (_, value) => value.copyWith(text: value.text.toUpperCase()),
+              ),
+            ],
             textInputAction: TextInputAction.search,
             onSubmitted: cubit.submitPostcode,
           ),
         ),
       ),
       pill(
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedMorphIcon(
-              icon: _applianceIcon(state.appliance),
-              size: size,
-              color: slate,
-            ),
-            const SizedBox(width: 8),
-            DropdownButton<Appliance>(
-              value: state.appliance,
-              style: text,
-              icon: arrow,
-              borderRadius: BorderRadius.circular(16),
-              items: [
-                for (final appliance in Appliance.values)
-                  DropdownMenuItem(
-                    value: appliance,
-                    child: Text(_applianceLabel(appliance)),
+        DropdownButton<Appliance>(
+          value: state.appliance,
+          style: text,
+          icon: arrow,
+          padding: inside,
+          borderRadius: BorderRadius.circular(16),
+          // Every entry shows the current icon, so the visible one morphs.
+          selectedItemBuilder: (_) => [
+            for (final appliance in Appliance.values)
+              Row(
+                children: [
+                  AnimatedMorphIcon(
+                    icon: _applianceIcon(state.appliance),
+                    size: size,
+                    color: slate,
                   ),
-              ],
-              onChanged: (appliance) {
-                if (appliance != null) cubit.selectAppliance(appliance);
-              },
-            ),
+                  const SizedBox(width: 8),
+                  Text(_applianceLabel(appliance)),
+                ],
+              ),
           ],
+          items: [
+            for (final appliance in Appliance.values)
+              DropdownMenuItem(
+                value: appliance,
+                child: Text(_applianceLabel(appliance)),
+              ),
+          ],
+          onChanged: (appliance) {
+            if (appliance != null) cubit.selectAppliance(appliance);
+          },
         ),
       ),
       // Not a FormField: its value is only initial, and restore() sets the
@@ -289,6 +318,7 @@ class _GreenWindowModuleState extends State<GreenWindowModule> {
           value: state.readyBy,
           style: text,
           icon: arrow,
+          padding: inside,
           borderRadius: BorderRadius.circular(16),
           menuMaxHeight: 420,
           selectedItemBuilder: (_) => [
