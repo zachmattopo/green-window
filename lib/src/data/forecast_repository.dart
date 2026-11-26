@@ -4,6 +4,7 @@ import 'forecast_cache.dart';
 import 'forecast_parser.dart';
 
 /// The client plus the cache: a successful fetch replaces the cached copy.
+/// Also passes the last inputs through, so the Cubit only needs this.
 class ForecastRepository {
   ForecastRepository(this._client, this._cache);
 
@@ -24,4 +25,8 @@ class ForecastRepository {
     }
     return forecast;
   }
+
+  Future<LastInputs> inputs() => _cache.inputs();
+
+  Future<void> saveInputs(LastInputs inputs) => _cache.saveInputs(inputs);
 }

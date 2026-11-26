@@ -86,3 +86,19 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - The same review found that a 200 response with no usable slots would replace the last good cached forecast. Empty forecasts are no longer cached.
 
 **Verified by hand:** *(to complete after review)*
+
+## Phase 3: state
+
+**Used for**
+- Writing `GreenWindowState` and `GreenWindowCubit` from PRD §9 and §10, and wiring them in `main.dart`.
+- A throwaway test (in-memory `shared_preferences`, `MockClient`) for latest-request-wins, stale-on-failure, recalculating without a fetch, and restore. Not committed, as the plan says.
+
+**Changed or rejected**
+- Dropped the plan's `Loading(cached?)`: a cached result being refreshed is `Ready(refreshing: true)`, so the two would have overlapped.
+- The outcome is derived on the state from the forecast, inputs and `now`, rather than stored and recalculated by hand in each Cubit method. Changing an input or ticking just emits a new state.
+- A cached forecast is shown only if `findGreenWindow` finds a window in it for the current appliance (PRD §10, enough future slots); otherwise it's treated as no cache.
+- The minute tick skips refetching while a request is in flight. Otherwise a tick during a new search could start a fetch for the old area and win the latest-request race.
+- `BlocProvider` is `lazy: false`; by default `restore()` wouldn't run until something reads the Cubit.
+- A self-review found that a refresh returning no usable slots replaced a good result with "No forecast" for 30 minutes. It now shows the error with the last good forecast, as the cache already does.
+
+**Verified by hand:** *(to complete after review)*

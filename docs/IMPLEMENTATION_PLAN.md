@@ -126,6 +126,8 @@ Phases 5 and 6 are independent of each other once Phase 4 is merged.
 
 **Tests:** none. Latest-request-wins and stale-on-failure are in the manual test plan (`?demo=slow`: search, then search again straight away; `?demo=error`).
 
+**Outcome (26 Nov 2026):** states are Idle, Loading, Ready(forecast, refreshing) and Failed(failure, stale?). A cached result being updated is `Ready(refreshing: true)`, so Loading carries no cache, and `fetchedAt` comes from the forecast. The outcome is a derived field on the state (inputs + `now`), so input changes and the minute tick only re-emit. A same-area submit, or a restore, with a forecast under 30 minutes old doesn't fetch (PRD §9). The repository passes the last inputs through, so the Cubit only depends on it. `main.dart` now loads timezone data and wires the Cubit (`lazy: false`, so `restore()` runs before Phase 4's UI exists). The tab-resume `tick()` call is left to Phase 4's widget. Latest-request-wins, stale-on-failure, no-fetch recalculation and restore were checked once with a throwaway test, not committed.
+
 ### Phase 4: functional UI (`phase-4/ui`)
 - An unstyled Material module: postcode field (Enter submits), appliance choice, ready-by picker with clear, and result area for every PRD §9 state. A plain-text 48-hour list stands in for the chart until Phase 6.
 - A sentence-style Semantics label for the result; visible focus; logical tab order; data attribution.
