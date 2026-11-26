@@ -52,69 +52,89 @@ class IntensityLine extends StatelessWidget {
       label:
           'Grid carbon intensity for the next 48 hours, with the recommended '
           'window marked',
-      child: SizedBox(
-        height: height,
-        child: LineChart(
-          duration: motion(context, 250),
-          LineChartData(
-            minX: 0,
-            maxX: span,
-            minY: -0.1 * top,
-            maxY: 1.1 * top,
-            titlesData: const FlTitlesData(show: false),
-            gridData: const FlGridData(show: false),
-            borderData: FlBorderData(show: false),
-            lineTouchData: const LineTouchData(enabled: false),
-            rangeAnnotations: RangeAnnotations(
-              verticalRangeAnnotations: [
-                if (window != null)
-                  VerticalRangeAnnotation(
-                    x1: x(window.start),
-                    x2: x(window.finish),
-                    color: slate,
-                  ),
-              ],
+      // Draws in left to right when the forecast first appears. The element
+      // is new each time the line goes from empty to shown, so later changes
+      // (appliance, ready by) keep the chart's own 250 ms morph instead.
+      child: TweenAnimationBuilder(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: motion(context, 900),
+        curve: Curves.easeOutCubic,
+        // The outer Align loosens the width, so the chart keeps its full
+        // width while the inner Align and ClipRect show only the left part.
+        builder: (context, reveal, chart) => Align(
+          alignment: Alignment.centerLeft,
+          child: ClipRect(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              widthFactor: reveal,
+              child: chart,
             ),
-            extraLinesData: ExtraLinesData(
-              verticalLines: [
-                if (deadline case final d?)
-                  VerticalLine(
-                    x: x(d),
-                    color: purple,
-                    strokeWidth: compact ? 2.5 : 3,
-                    dashArray: [6, 5],
-                  ),
-              ],
-            ),
-            lineBarsData: [
-              LineChartBarData(
-                spots: spots,
-                barWidth: compact ? 2 : 3,
-                dotData: const FlDotData(show: false),
-                color: inNotch == null ? slate : null,
-                gradientArea: LineChartGradientArea.wholeChart,
-                gradient: inNotch == null
-                    ? null
-                    : LinearGradient(
-                        colors: const [
-                          slate,
-                          slate,
-                          cobalt,
-                          cobalt,
-                          slate,
-                          slate,
-                        ],
-                        stops: [
-                          0,
-                          inNotch[0],
-                          inNotch[0],
-                          inNotch[1],
-                          inNotch[1],
-                          1,
-                        ],
-                      ),
+          ),
+        ),
+        child: SizedBox(
+          height: height,
+          child: LineChart(
+            duration: motion(context, 250),
+            LineChartData(
+              minX: 0,
+              maxX: span,
+              minY: -0.1 * top,
+              maxY: 1.1 * top,
+              titlesData: const FlTitlesData(show: false),
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              lineTouchData: const LineTouchData(enabled: false),
+              rangeAnnotations: RangeAnnotations(
+                verticalRangeAnnotations: [
+                  if (window != null)
+                    VerticalRangeAnnotation(
+                      x1: x(window.start),
+                      x2: x(window.finish),
+                      color: slate,
+                    ),
+                ],
               ),
-            ],
+              extraLinesData: ExtraLinesData(
+                verticalLines: [
+                  if (deadline case final d?)
+                    VerticalLine(
+                      x: x(d),
+                      color: purple,
+                      strokeWidth: compact ? 2.5 : 3,
+                      dashArray: [6, 5],
+                    ),
+                ],
+              ),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  barWidth: compact ? 2 : 3,
+                  dotData: const FlDotData(show: false),
+                  color: inNotch == null ? slate : null,
+                  gradientArea: LineChartGradientArea.wholeChart,
+                  gradient: inNotch == null
+                      ? null
+                      : LinearGradient(
+                          colors: const [
+                            slate,
+                            slate,
+                            cobalt,
+                            cobalt,
+                            slate,
+                            slate,
+                          ],
+                          stops: [
+                            0,
+                            inNotch[0],
+                            inNotch[0],
+                            inNotch[1],
+                            inNotch[1],
+                            1,
+                          ],
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
