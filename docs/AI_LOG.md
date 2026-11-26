@@ -136,3 +136,32 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - An unknown mode runs live with no banner, rather than failing.
 
 **Verified by hand:** *(to complete after review)*
+
+
+## Phase 6: design and motion
+
+**Used for**
+- Building the theme, first screen, 48-hour line and below-the-fold chart from the wireframes and the direction contract.
+- Reading the `reel_text`, `morphnext` and `fl_chart` sources for the APIs actually available in the pinned versions.
+- Checking the desktop and mobile layouts and each §9 state in Chrome on a release Wasm build with `?demo=fixture`, `error` and `slow`.
+
+**Changed or rejected**
+- `fl_chart`'s bar chart can't draw vertical extra lines, so the now and deadline rules are overlaid in a `Stack`. Bars are a fixed width with a fixed gap, so their x positions are known.
+- The 2 px Cobalt Green top edge on dirty bars is a second `rodStackItem`, sized in gCO2/kWh from the chart's height.
+- The first loading animation used `ReelWaiting.scramble`, which also rolled the colon ("5-5--"). It's now a frame builder that keeps `:` fixed.
+- The first screen is a `SliverFillRemaining(hasScrollBody: false)`: it fills the viewport, and grows instead of overflowing when the content is taller.
+- The hero line was first a `CustomPaint`; on review it moved to `fl_chart`'s `LineChart`, so every chart uses one library. The notch is a vertical range annotation, the Cobalt Green line inside it is a gradient with hard stops at the window's edges, gaps are `FlSpot.nullSpot`, and the now and deadline rules are vertical extra lines.
+- Kept the PRD's first-visit explainer instead of the wireframe's rewrite. The loading line ("Getting the forecast for RG10…") and the demo banner text are from the wireframes, still to confirm.
+- A review pass found three things, now fixed: the purple focus ring was only 2.5:1 on the dark section, so "Back to the answer" uses a Cobalt Green one; a failed refresh of a No forecast result showed Retry twice; and the deadline switch was copied in two files (now `deadlineOf`). A fourth finding, that an all-zero forecast would break the hero line, was wrong: `fl_chart` draws it flat along the bottom.
+- The first Pages deploy failed: `deploy-pages` looked for the artifact about a second after `upload-pages-artifact` in the same job and found none, a known race (actions/deploy-pages#451). Re-running can't recover it, so the workflow now builds and deploys in separate jobs. The fix went to `main` directly by mistake, as `9fe59a9`. I kept it because it touches only CI, and recorded it here.
+- Detail pass after review: the dropdown pills are a transparent `Material` with a stadium shape, so the dropdown's hover and focus ink fills the whole pill (the appliance icon moved inside the dropdown, and every selected-item entry shows the current icon so the visible one still morphs). The postcode field upper-cases as you type. The two text links got 16 px side padding, set into the margin so their text still lines up. Above the chart, the day of the leftmost bar in view follows the horizontal scroll, so the day isn't lost mid-chart.
+- The "Couldn't update" notice and the postcode error now slide in and out (`widgets/slide_in.dart`: an `AnimatedSwitcher` with a size, fade and slide transition) instead of jumping. The size grows with the slide, so the answer below moves smoothly too. The first try centred the notice, because the size transition centres a narrower child; the child is now full width.
+- Clicking Retry with no cached forecast made the answer jump: it's centred vertically, so when the button went away during loading, the block moved down by half its height. Every state now keeps the button's space (an invisible `Visibility` with `maintainSize`), so only the button disappears. The foot of the first screen does the same: the 48-hour line's height and the footer row are kept without a forecast (the attribution sits in the footer row, the forecast link is hidden), so the answer doesn't move when the forecast arrives.
+- A retry with a cached forecast now keeps the failure on screen as `Failed(retrying: true)`, so the notice doesn't slide out and back. The UI didn't read `retrying` at first, so Retry looked dead: nothing on screen changed while it refetched. The notice's Retry is now hidden (its space kept) while retrying, and the footer and spoken sentence say "Updating…".
+- The start time and day word now sit in the same place in every state. The time is at least as wide as an invisible "00:00", so the day word always starts at the same x. The day word's line is kept even when empty, and a long one shrinks rather than wrapping under the time on a narrow window. Desktop puts the day beside the time, mobile below it, by breakpoint rather than by `Wrap`, which wrapped differently per word. Loading shows "Loading" as the day word.
+- A second review found that keeping the failure during a retry also caught a search for a new area, which then showed "Couldn't update" for an area that hadn't been tried. The rule now only applies to the same area.
+- Removed the wireframe's dotted "now" rule at the left of the hero line: at the very edge it read as stray dots, and nothing tied it to the "NOW" label. The chart below the fold keeps its own now rule.
+- The first screen was a `SliverFillRemaining(hasScrollBody: false)`, which sizes itself from its children's intrinsic heights. In a short browser window (1000 × 598, debug build) the answer column needed 17 px more than that estimate and overflowed. A throwaway widget test couldn't reproduce the gap, so the screen no longer relies on the estimate: it's a column at least the viewport's height (from a `LayoutBuilder`) that grows with its content, with `spaceBetween` centring the answer between the inputs and the foot. The "Couldn't update" notice moved out of `ResultView` into `UpdateNotice` so it stays under the inputs.
+- Not built from the wireframes: the "Use live data" link in the demo banner, the dashed ready-by pill when unset, the dashed line in No forecast, and the deadline mark when a Wait has a ready-by time (only Not enough time carries a deadline).
+
+**Verified by hand:** *(to complete after review)*
