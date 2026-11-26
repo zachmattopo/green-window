@@ -116,18 +116,21 @@ class ResultView extends StatelessWidget {
 
     // The time and the day word sit in the same place in every state: the
     // time is at least as wide as "00:00", and the day word's line is there
-    // even when it's empty.
-    final time = Stack(
-      children: [
-        Visibility(
-          visible: false,
-          maintainSize: true,
-          maintainAnimation: true,
-          maintainState: true,
-          child: Text('00:00', style: timeStyle),
-        ),
-        _BigTime(big, waiting: state.status is Loading, style: timeStyle),
-      ],
+    // even when it's empty. The clip keeps rolling digits inside the time's
+    // own box: reel_text paints them well above and below it otherwise.
+    final time = ClipRect(
+      child: Stack(
+        children: [
+          Visibility(
+            visible: false,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Text('00:00', style: timeStyle),
+          ),
+          _BigTime(big, waiting: state.status is Loading, style: timeStyle),
+        ],
+      ),
     );
     final dayWord = SizedBox(
       height: dayStyle.fontSize! * dayStyle.height!,

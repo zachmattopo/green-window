@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:material_ui/material_ui.dart';
@@ -13,6 +15,8 @@ import 'src/ui/green_window_module.dart';
 import 'src/ui/theme.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  _focusVisibleOnlyForKeys();
   initializeTimeZones();
   final live = http.Client();
   // PRD §12. An unknown mode runs live, with no banner.
@@ -31,6 +35,24 @@ void main() {
       child: GreenWindowApp(demoMode: demo == null ? null : mode),
     ),
   );
+}
+
+/// Like CSS `:focus-visible`: focus fills show after keyboard use, not after
+/// a click. Flutter keeps them on mouse clicks on desktop, so a dropdown
+/// stayed tinted once its menu closed and handed focus back.
+void _focusVisibleOnlyForKeys() {
+  final focus = FocusManager.instance;
+  GestureBinding.instance.pointerRouter.addGlobalRoute((event) {
+    if (event is PointerDownEvent) {
+      focus.highlightStrategy = FocusHighlightStrategy.alwaysTouch;
+    }
+  });
+  HardwareKeyboard.instance.addHandler((event) {
+    if (event is KeyDownEvent) {
+      focus.highlightStrategy = FocusHighlightStrategy.alwaysTraditional;
+    }
+    return false; // only watching; the key still reaches the app
+  });
 }
 
 class GreenWindowApp extends StatelessWidget {
