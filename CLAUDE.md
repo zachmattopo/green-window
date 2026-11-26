@@ -3,6 +3,7 @@
 Flutter Web app (built for Wasm) that tells you when to start an appliance so it runs on the cleanest electricity in your GB region. Data: the National Grid / NESO Carbon Intensity API.
 
 - Product spec: [docs/PRD.md](docs/PRD.md). Phased plan: [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+- Design: PRD §16, the [wireframes](https://claude.ai/artifact/4LLK8xrWzyZCwNnGqoMVRN), and the direction contract in `.impeccable/surfaces/`. UI work follows them.
 - Flutter is pinned with fvm (`.fvmrc`, 3.50.1). Always run `fvm flutter …` and `fvm dart …`, never the global SDK.
 
 ## Architecture

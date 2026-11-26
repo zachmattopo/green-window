@@ -34,3 +34,22 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 
 **Not taken (for now)**
 - Removing `reel_text`, `morphnext` and `fl_chart` until Phase 6, a smaller cache, and replacing `timezone` with a hand-written UK rule. Left for Phase 6, or not needed at this scale.
+
+## Phase 0 follow-up: design direction and wireframes
+
+**Used for**
+- The Impeccable design skill: a product brief (`PRODUCT.md`), three wireframe directions to choose from, and then wireframes for every PRD §9 state, desktop and mobile, in a Claude Design canvas.
+- Finding Sanzo Wada colour combinations with a green that could fill the first screen, and checking their contrast ratios with a script.
+- Checking what `reel_text` can animate: any glyph, so the start time and the day word can both roll.
+
+**Changed or rejected**
+- Chose the "tide table" direction over a station departure board and a Crouwel-style grid.
+- Removed the tide wording ("Next low water"): it made the tide sound like the reason the grid was cleaner. Copy now names the real thing.
+- Swapped the first palette (Blue Violet ground) for a green one, because the product is called Green Window. Compared no. 271 with no. 290 and kept no. 271: its ink contrast is 12.9:1, against 6.8:1, and no. 290's dirty-hours colour almost disappears on its own dark ground.
+- Pomegranite Purple fails contrast on the dark ground (2.5:1), so the bars below the fold use Green Blue and Cobalt Green only.
+
+**Verified by hand:** *(to complete after review)*
+
+**Design review follow-up**
+- Feedback: the chart bars were too thin, and the purple for dirty hours was missing. Bars are now 22 px (14 px on mobile), and the chart scrolls sideways.
+- For "dirty" I didn't invent a threshold. The API's own `intensity.index` uses NESO's fixed bands, and high or very high now means dirty, checked live across four regions. That needed one parser field, which is in the PRD (§8.1) and plan (Phase 2). Purple fails contrast on the dark ground, so dirty bars get a Cobalt Green top edge rather than moving purple off them.

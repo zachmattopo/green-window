@@ -68,7 +68,7 @@ Everything else (retries, caching, races, UI states, copy, chart, demo mode) is 
 | 3 | State | Cubit, persistence | ~250 | 2 |
 | 4 | Functional UI | §9 states, a11y, unstyled | ~400 | 3 |
 | 5 | Demo mode and hosting | §12, GitHub Pages | ~150 | 4 |
-| 6 | Design and motion | Your wireframes, chart, animations | ~600–900 (may split 6a/6b) | 4, design |
+| 6 | Design and motion | Theme and layout from the wireframes, chart, animations | ~600–900 (may split 6a/6b) | 4, design |
 | 7 | Docs and QA | README, test plan, limitations | Docs | 5, 6 |
 
 Phases 5 and 6 are independent of each other once Phase 4 is merged.
@@ -108,12 +108,12 @@ Phases 5 and 6 are independent of each other once Phase 4 is merged.
 **Done when:** that test passes. Tie-break and postcode parsing go in the Phase 7 manual test plan.
 
 ### Phase 2: data layer (`phase-2/data`)
-- `forecast_parser.dart`: reads `data.shortname` and `data.data[].intensity.forecast`; drops invalid slots. A body of `null`, or `data: null`, → `NotFound`. Anything else unexpected → `ParseFailure`.
+- `forecast_parser.dart`: reads `data.shortname`, `data.data[].intensity.forecast` and `intensity.index` (an enum on `ForecastSlot`; missing or unknown → none, never dirty); drops invalid slots. A body of `null`, or `data: null`, → `NotFound`. Anything else unexpected → `ParseFailure`.
 - `carbon_intensity_client.dart`: `GET /regional/intensity/{from}/fw48h/postcode/{outcode}`, 10 s timeout and no retry on a timeout. 2 retries (1 s, 2 s) on network errors and 5xx. 400 → InvalidPostcode, 429 → RateLimited. The API returns 200 with `null`, not 400, for a well-formed outward code it doesn't know (checked live on 26 Nov 2026), so the parser handles that case.
 - `forecast_cache.dart`: JSON in `SharedPreferencesAsync`, keyed by outward code, with `fetchedAt`; stores the last inputs.
 - `forecast_repository.dart`: `cached(outcode)` and `fetch(outcode)`; a successful fetch writes the cache.
 
-**Test 2: `forecast_parser_test.dart`.** A garbled payload gives `ParseFailure`, a `null` body gives `NotFound`, and a response with some bad slots keeps the good ones. Retries, status mapping and the cache are checked by hand with `?demo=`.
+**Test 2: `forecast_parser_test.dart`.** A garbled payload gives `ParseFailure`, a `null` body gives `NotFound`, and a response with some bad slots keeps the good ones, and a slot with an unknown index is kept, with no band. Retries, status mapping and the cache are checked by hand with `?demo=`.
 
 ### Phase 3: state (`phase-3/state`)
 - `GreenWindowState`: inputs (outcode, appliance, readyBy) plus a sealed status: Idle, Loading(cached?), Ready(outcome, forecast, fetchedAt, refreshing), Failed(failure, cached?).
@@ -137,10 +137,10 @@ Phases 5 and 6 are independent of each other once Phase 4 is merged.
 **Done when:** the live URL works in Chrome, Safari and Firefox, and in each demo mode.
 
 ### Phase 6: design and motion (`phase-6a/theme-layout`, `phase-6b/chart-motion`)
-Blocked on your wireframes.
-- Theme and layout from the design.
-- 48-hour chart with the window and deadline marked.
-- `reel_text` for the percentage and intensity values, `morphnext` for the appliance and outcome icons. Both respect reduce-motion.
+Built against the [Green Window wireframes](https://claude.ai/artifact/4LLK8xrWzyZCwNnGqoMVRN), PRD §16, and the direction contract in `.impeccable/surfaces/lib-src-ui-green-window-module-dart.md`. Each §9 state has a desktop and a mobile artboard.
+- 6a: the theme from Sanzo Wada no. 271 (colour roles in PRD §16). The first screen holds the inputs as capsule pills and the large start time and day word. Below it are the headline, and the 48-hour line with the window notch along the bottom edge. Every §9 state as drawn.
+- 6b: the below-the-fold 48-hour bar chart (`fl_chart` inside a horizontal scroll view, starting at now), with the window and deadline marked. Bars are coloured by the API's index: dirty (high or very high) is Pomegranite Purple with a Cobalt Green top edge (PRD §16). `reel_text` for the start time and day word: only the glyphs that change roll, and loading uses its waiting animation. `morphnext` for the appliance and outcome icons. Both respect reduce-motion.
+- Barlow Condensed and Barlow are bundled as font assets, not fetched at runtime, so the large time is measured correctly on its first frame. Check that `reel_text` keeps digit widths steady with tabular figures.
 - No new tests: the chart and motion are presentation, checked by hand. The window they show is already covered in Phase 1.
 
 ### Phase 7: docs and QA (`phase-7/docs`)
@@ -154,5 +154,5 @@ Blocked on your wireframes.
 | GitHub Pages can't set the COOP/COEP headers that multi-threaded Wasm needs | Checked in Phase 0: Wasm runs single-threaded without them, which is plenty for one module. Browsers without WasmGC fall back to the JS build automatically. |
 | API down during the interview | Cache, `?demo=fixture`, and recorded screenshots |
 | Timezone data size on web | Use the smallest data set that includes Europe/London; measure in Phase 1 |
-| Wireframes arrive late | Phases 1–5 don't depend on design |
+| Wireframes arrive late | Resolved 26 Nov 2026: wireframes are done (PRD §16). Phases 1–5 don't depend on them. |
 | Running past the ~4-hour timebox | Phases 1–4 are the core. 5–7 can be trimmed, and the trims recorded in Known limitations. |

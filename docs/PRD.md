@@ -5,7 +5,7 @@
 | Status | Draft for review |
 | Owner | Hafiz (product and engineering) |
 | Last updated | 26 November 2026 |
-| Design | Pending: wireframes to follow. This document fixes behaviour and copy, not layout or theme. |
+| Design | Direction A, green (Sanzo Wada no. 271). Wireframes: [Green Window wireframes](https://claude.ai/artifact/4LLK8xrWzyZCwNnGqoMVRN). Summary in §16. This document fixes behaviour and copy; the wireframes fix layout and theme. |
 
 ## 1. Summary
 
@@ -89,7 +89,7 @@ Out of target: Northern Ireland, which is on a separate grid that the API doesn'
 
 **US-6 Works when things break.** If the forecast can't be loaded, I can still see the last good result for my area, marked with when it was fetched, and retry.
 
-**US-7 Context.** I can see the 48-hour forecast for my region with my window highlighted, and when the forecast was last updated. The layout comes with the design.
+**US-7 Context.** I can see the 48-hour forecast for my region with my window highlighted, and when the forecast was last updated. It sits below the fold, reached by scrolling or by "See the forecast" (§16).
 
 ## 7. Inputs
 
@@ -118,6 +118,7 @@ This section is the spec for the domain logic and its tests.
 - The API returns half-hour slots in UTC, each with a `from` time, a `to` time and a `forecast` intensity in gCO2/kWh.
 - A slot is usable only if `forecast` is a whole number ≥ 0 and `to` is exactly 30 minutes after `from`. Unusable slots are dropped, which leaves a gap.
 - The **current slot** is the first slot whose `to` is later than now.
+- Each slot also carries `index`, NESO's band for that intensity: `very low`, `low`, `moderate`, `high` or `very high`. The bands are fixed numbers, the same in every region. Seen live on 26 Nov 2026: moderate up to 169, high 171–227, very high from 230, low 25–56, very low up to 23. A slot is **dirty** when its index is `high` or `very high`. The index only colours the chart (§16) and never changes the recommendation. A missing or unknown index keeps the slot, which is then not marked dirty.
 
 ### 8.2 Candidate windows
 - A window is `n` consecutive usable slots, where `n` = the appliance run time divided by 30 minutes, **rounded up**.
@@ -231,4 +232,24 @@ Custom durations, notifications when the window opens, a phone home-screen widge
 
 - **Assumption:** the 10% / 10 gCO2/kWh "meaningful difference" thresholds are a product judgement and will be tuned against real data in Phase 1.
 - **Checked (26 Nov 2026):** BT, GY and JE outward codes return HTTP 200 with the body `null`. IM returns North West England's forecast, which is wrong for the Isle of Man's own grid. So the app blocks all four before sending a request (US-4).
-- **Open:** layout, theme, chart style and motion. These come from the wireframes and land in Phase 6.
+- **Decided (26 Nov 2026):** layout, theme and chart style, in §16 and the wireframes. **Still open:** motion beyond `reel_text`, and the final typeface (Barlow Condensed in the wireframes).
+
+## 16. Design
+
+Wireframes for every §9 state, desktop (1440 × 900) and mobile (390 × 844): [Green Window wireframes](https://claude.ai/artifact/4LLK8xrWzyZCwNnGqoMVRN). The direction contract that Phase 6 builds against is in `.impeccable/surfaces/lib-src-ui-green-window-module-dart.md`, and the product context is in `PRODUCT.md`.
+
+- **Surface:** a standalone page at its own URL, desktop-first. Mobile stacks the same parts.
+- **One answer first:** the first screen holds the inputs and the recommendation only. The start time and day word are set very large with `reel_text`. The §8.5 headline sits beneath. A thin 48-hour intensity line runs along the bottom edge, with the window cut into it as a solid notch.
+- **Context on demand:** these sit below the fold:
+  - the bar chart
+  - the window and starting-now figures
+  - the high or very high stretches
+  - "Forecast updated"
+  - the attribution
+- **Chart:** one bar per half-hour (22 px on desktop, 14 px on mobile) with 2-hour time labels and the day name at midnight. It starts at now and scrolls sideways for the rest of the 48 hours. It can be scrolled with the keyboard, and the chart has one sentence-style label for screen readers.
+- **Colour (Sanzo Wada no. 271):**
+  - The first screen is Cobalt Green `#94ff94` with Deep Slate Green `#0f261f` ink (12.9:1). The area below the fold is Deep Slate Green.
+  - Chart bars are coloured by the §8.1 index. Moderate or lower is Green Blue `#2dbc94`. Dirty (high or very high) is Pomegranite Purple `#b90078` with a 2 px Cobalt Green top edge, because purple alone is 2.5:1 on the dark ground. The recommended window is the only Cobalt Green bar.
+  - Pomegranite Purple also marks the "% cleaner" figure, the ready-by deadline and field errors.
+- **Copy:** names the real thing ("Cleanest time to start", "Grid carbon intensity"), never a metaphor that could read as the cause. Headlines and errors come from §8.5, §9 and §10 unchanged. Three pieces of wireframe copy aren't in this PRD yet: the first-visit explainer, the section labels and the demo banner text. They're proposals to confirm in Phase 6.
+- The forecast in the wireframes is synthetic, shaped like a real day.
