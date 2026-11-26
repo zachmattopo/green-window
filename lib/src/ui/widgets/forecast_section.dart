@@ -109,8 +109,8 @@ class ForecastSection extends StatelessWidget {
     final label = [
       '48-hour forecast, one bar per half-hour, scrollable.',
       if (window != null)
-        'Your window is ${clockLabel(window.start)} to '
-            '${clockLabel(window.finish)} ${weekdayName(window.start)}.',
+        'Your window is ${clockLabel(window.start)} ${weekdayName(window.start)}'
+            ' to ${clockLabel(window.finish)} ${weekdayName(window.finish)}.',
       if (runs.isNotEmpty)
         'High or very high: ${runs.map(span).join(', ')}.'
       else

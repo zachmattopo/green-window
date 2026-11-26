@@ -159,6 +159,8 @@ Built against the [Green Window wireframes](https://claude.ai/artifact/4LLK8xrWz
 - README: what it is and the live link; track and API, and why; architecture and trade-offs; how to run (fvm, `--wasm`); test and QA approach; a manual test plan derived from PRD §9, §10 and §12; known limitations; AI usage (links AI_LOG); screenshots.
 - A final pass of the manual test plan on the hosted build.
 
+**Outcome (26 Nov 2026):** the README covers every point above, with four screenshots of the hosted build in `docs/screenshots/` and a short manual test plan with the results of its last run. The pass ran on the hosted Wasm build in Chromium (1440 × 900, plus 390 × 844), live and in every demo mode. Two reproductions are new: aging the cached forecast in Local Storage reaches "error with cache" (`?demo=error`) and "Updating…" then a timeout (`?demo=slow`) without waiting 30 minutes. It found one bug, now fixed: the chart's screen-reader label read a window across midnight as "23:30 to 01:30 Thursday". Not run: Firefox, VoiceOver, and leaving the tab open past the start time. They're listed in the README.
+
 ## Known risks
 
 | Risk | Mitigation |

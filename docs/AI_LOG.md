@@ -15,7 +15,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - Cut the AI-drafted test plan, which tested almost every rule, to two unit tests (window finder, parser), following the brief's "a test or two". Dropped bloc_test, mocktail and equatable, which only those extra tests needed.
 - Took the council's advice not to bring my usual production stack (get_it, injectable, freezed, drift). It's too heavy for one module.
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main.
 
 ## Phase 0 follow-up: plan audit
 
@@ -48,7 +48,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - Swapped the first palette (Blue Violet ground) for a green one, because the product is called Green Window. Compared no. 271 with no. 290 and kept no. 271: its ink contrast is 12.9:1, against 6.8:1, and no. 290's dirty-hours colour almost disappears on its own dark ground.
 - Pomegranite Purple fails contrast on the dark ground (2.5:1), so the bars below the fold use Green Blue and Cobalt Green only.
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main.
 
 **Design review follow-up**
 - Feedback: the chart bars were too thin, and the purple for dirty hours was missing. Bars are now 22 px (14 px on mobile), and the chart scrolls sideways.
@@ -67,7 +67,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - Without a deadline, a "now" run that would finish past the forecast's end gives No forecast instead of crashing on a missing deadline.
 - Kept to one test file, as the plan says. Postcode parsing was checked once with a throwaway script, not committed.
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main.
 
 ## Phase 2: data layer
 
@@ -85,7 +85,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - A self-review found that blocked or full browser storage made `localStorage` throw, which turned a good fetch into an error that isn't a `ForecastFailure`. Every cache read and write now treats a storage error as a miss.
 - The same review found that a 200 response with no usable slots would replace the last good cached forecast. Empty forecasts are no longer cached.
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main.
 
 ## Phase 3: state
 
@@ -101,7 +101,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - `BlocProvider` is `lazy: false`; by default `restore()` wouldn't run until something reads the Cubit.
 - A self-review found that a refresh returning no usable slots replaced a good result with "No forecast" for 30 minutes. It now shows the error with the last good forecast, as the cache already does.
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main.
 
 ## Phase 4: functional UI
 
@@ -119,7 +119,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - Checking keyboard use in Chrome showed Material's focus overlay was too faint on unselected chips to see. `main.dart`'s theme adds a 3 px border on focus to chips and filled and outlined buttons. Phase 6 restyles it.
 - A self-review found three problems, now fixed. Retry was hidden when a refresh failed while the cached result said Not enough time. The restored postcode could miss the field if it arrived before the first build. And the result, as a live region, was read out every minute in Not enough time, because the earliest finish moves with the clock. It's now announced only when the status or an input changes.
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main.
 
 
 ## Phase 5: demo mode and hosting
@@ -135,7 +135,7 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - `fixture` uses its own `demo.` storage keys. Its clock is frozen at 11:00 UTC on 26 Nov 2026, so a live forecast cached later would look newer than "now", skip the fetch and be read at the wrong time. The other modes share the live cache, so stale-on-failure can be shown with them.
 - An unknown mode runs live with no banner, rather than failing.
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main.
 
 
 ## Phase 6: design and motion
@@ -164,4 +164,19 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - The first screen was a `SliverFillRemaining(hasScrollBody: false)`, which sizes itself from its children's intrinsic heights. In a short browser window (1000 × 598, debug build) the answer column needed 17 px more than that estimate and overflowed. A throwaway widget test couldn't reproduce the gap, so the screen no longer relies on the estimate: it's a column at least the viewport's height (from a `LayoutBuilder`) that grows with its content, with `spaceBetween` centring the answer between the inputs and the foot. The "Couldn't update" notice moved out of `ResultView` into `UpdateNotice` so it stays under the inputs.
 - Not built from the wireframes: the "Use live data" link in the demo banner, the dashed ready-by pill when unset, the dashed line in No forecast, and the deadline mark when a Wait has a ready-by time (only Not enough time carries a deadline).
 
-**Verified by hand:** *(to complete after review)*
+**Verified by hand:** Done before raising PR to main (both code review and manual test).
+
+## Phase 7: docs and QA
+
+**Used for**
+- Writing the README from the brief's checklist, the PRD and this log, and turning PRD §9, §10 and §12 into the manual test plan.
+- Running that plan on the hosted build in a Chromium browser, live and in every demo mode, reading the result through Flutter's accessibility tree.
+- Taking the screenshots with a throwaway headless-Chrome script against the hosted `?demo=fixture` and `?demo=error` pages, not committed.
+
+**Changed or rejected**
+- The plan records what was actually run. Firefox, VoiceOver, and the stay-current check are marked "not run", not passed.
+- "Error with cache" and "Updating…" normally need a forecast over 30 minutes old. The plan reaches them by editing the cached forecast's time in Local Storage instead of waiting, so a reviewer can see both in a minute.
+- The pass found that the chart's screen-reader label put one weekday after both times, so a window across midnight read "23:30 to 01:30 Thursday". Each time now has its own weekday.
+- Tie-break went in the plan as a code read: no fixture or demo mode produces two equal windows.
+
+**Verified by hand:** Done before raising PR to main.
