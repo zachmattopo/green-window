@@ -153,6 +153,8 @@ Built against the [Green Window wireframes](https://claude.ai/artifact/4LLK8xrWz
 - Barlow Condensed and Barlow are bundled as font assets, not fetched at runtime, so the large time is measured correctly on its first frame. Check that `reel_text` keeps digit widths steady with tabular figures.
 - No new tests: the chart and motion are presentation, checked by hand. The window they show is already covered in Phase 1.
 
+**Outcome (26 Nov 2026):** built as one branch (`phase-6/design-and-motion`), about 1,190 added lines, so it goes in as two PRs: 6a (fonts, `theme.dart`, the module, `result_view.dart`, `intensity_line.dart`) and 6b (`forecast_section.dart`). Barlow Condensed and Barlow (OFL) are in `assets/fonts/`. Barlow Condensed has tabular figures, so the time keeps its width while it rolls. The chart is `fl_chart` with the now and deadline rules overlaid, since its bar chart can't draw vertical lines. A gap in the forecast closes up in the chart but shows as a break in the hero line, which places slots by time. The appliance and outcome icons are `AnimatedMorphIcon`s. `reel_text`, `morphnext`, the chart and the scrolls all snap under reduced motion. Checked in Chrome on a release Wasm build at 1440 × 900 and 375 × 812: first visit, loading, Wait, Not enough time, error with and without cache, and a postcode error.
+
 ### Phase 7: docs and QA (`phase-7/docs`)
 - README: what it is and the live link; track and API, and why; architecture and trade-offs; how to run (fvm, `--wasm`); test and QA approach; a manual test plan derived from PRD §9, §10 and §12; known limitations; AI usage (links AI_LOG); screenshots.
 - A final pass of the manual test plan on the hosted build.

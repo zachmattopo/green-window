@@ -18,13 +18,17 @@ Duration motion(BuildContext context, int ms) =>
     ? Duration.zero
     : Duration(milliseconds: ms);
 
+/// PRD §11: a focus ring keyboard users can see. Purple on the light ground;
+/// pass [cobalt] on the dark one, where purple is only 2.5:1.
+WidgetStateBorderSide focusRing([Color color = purple]) =>
+    WidgetStateBorderSide.resolveWith(
+      (states) => states.contains(WidgetState.focused)
+          ? BorderSide(color: color, width: 3)
+          : null,
+    );
+
 ThemeData greenWindowTheme() {
-  // PRD §11: a focus ring keyboard users can see on every control.
-  final focusRing = WidgetStateBorderSide.resolveWith(
-    (states) => states.contains(WidgetState.focused)
-        ? const BorderSide(color: purple, width: 3)
-        : null,
-  );
+  final ring = focusRing();
   const pillText = TextStyle(
     fontFamily: condensed,
     fontSize: 22,
@@ -47,7 +51,7 @@ ThemeData greenWindowTheme() {
     textSelectionTheme: const TextSelectionThemeData(cursorColor: slate),
     filledButtonTheme: FilledButtonThemeData(
       style: ButtonStyle(
-        side: focusRing,
+        side: ring,
         backgroundColor: const WidgetStatePropertyAll(slate),
         foregroundColor: const WidgetStatePropertyAll(cobalt),
         textStyle: const WidgetStatePropertyAll(pillText),
@@ -59,13 +63,13 @@ ThemeData greenWindowTheme() {
     ),
     textButtonTheme: TextButtonThemeData(
       style: ButtonStyle(
-        side: focusRing,
+        side: ring,
         foregroundColor: const WidgetStatePropertyAll(slate),
         textStyle: const WidgetStatePropertyAll(
           TextStyle(fontFamily: condensed, fontWeight: FontWeight.w500),
         ),
       ),
     ),
-    iconButtonTheme: IconButtonThemeData(style: ButtonStyle(side: focusRing)),
+    iconButtonTheme: IconButtonThemeData(style: ButtonStyle(side: ring)),
   );
 }
