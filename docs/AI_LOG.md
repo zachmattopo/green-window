@@ -68,3 +68,21 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - Kept to one test file, as the plan says. Postcode parsing was checked once with a throwaway script, not committed.
 
 **Verified by hand:** *(to complete after review)*
+
+## Phase 2: data layer
+
+**Used for**
+- Writing the failures, parser, client, cache and repository from PRD §10, and `forecast_parser_test.dart`.
+- Probing the live API: an unrounded `from` (11:17) still returns the 11:00 slot, and an unknown outward code returns 200 with `null`.
+- A throwaway `MockClient` script to check retry counts and status mapping, not committed.
+
+**Changed or rejected**
+- The cache keeps the raw response body and re-parses it, instead of a `toJson` for `Forecast`. The parser is already tested, so a corrupt or old-format entry just becomes a cache miss.
+- Statuses other than 200, 400, 429 and 5xx map to `ParseFailure` with no retry, since retrying a 404 can't help.
+- Slots whose times have no UTC offset are dropped: they would parse as browser-local time and shift every recommendation.
+- The parser sorts slots by time, because `findGreenWindow` assumes time order.
+- `ForecastSlot.index` defaults to `none`, so Phase 1's test helpers didn't change.
+- A self-review found that blocked or full browser storage made `localStorage` throw, which turned a good fetch into an error that isn't a `ForecastFailure`. Every cache read and write now treats a storage error as a miss.
+- The same review found that a 200 response with no usable slots would replace the last good cached forecast. Empty forecasts are no longer cached.
+
+**Verified by hand:** *(to complete after review)*

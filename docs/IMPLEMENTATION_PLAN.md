@@ -117,6 +117,8 @@ Phases 5 and 6 are independent of each other once Phase 4 is merged.
 
 **Test 2: `forecast_parser_test.dart`.** A garbled payload gives `ParseFailure`, a `null` body gives `NotFound`, and a response with some bad slots keeps the good ones, and a slot with an unknown index is kept, with no band. Retries, status mapping and the cache are checked by hand with `?demo=`.
 
+**Outcome (26 Nov 2026):** the test passes, including a row that parses the saved RG10 fixture in full (96 slots). The cache stores the raw API body and re-parses it on read, so there's no second serialiser, and a corrupt entry is a cache miss. Retries, timeout and status mapping were checked once with a throwaway `MockClient` script (5xx and network errors: 3 calls; timeout, 400, 429 and other statuses: 1 call). The live API accepts an unrounded `from` and still returns the current slot.
+
 ### Phase 3: state (`phase-3/state`)
 - `GreenWindowState`: inputs (outcode, appliance, readyBy) plus a sealed status: Idle, Loading(cached?), Ready(outcome, forecast, fetchedAt, refreshing), Failed(failure, cached?).
 - `GreenWindowCubit`: `restore()`, `submitPostcode()`, `selectAppliance()`, `setReadyBy()`, `retry()`. Uses the cache first, then refreshes. Changing the appliance or ready-by time recalculates without a fetch. Refetches if the forecast is over 30 minutes old. **Latest request wins**: each fetch gets an id, and stale completions are ignored.
