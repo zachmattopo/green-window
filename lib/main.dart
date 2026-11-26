@@ -10,6 +10,7 @@ import 'src/data/forecast_cache.dart';
 import 'src/data/forecast_repository.dart';
 import 'src/ui/green_window_cubit.dart';
 import 'src/ui/green_window_module.dart';
+import 'src/ui/theme.dart';
 
 void main() {
   initializeTimeZones();
@@ -39,24 +40,9 @@ class GreenWindowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // PRD §11: a focus ring keyboard users can see; Material's own overlay
-    // is too faint on chips. Phase 6 restyles it.
-    final focusRing = WidgetStateBorderSide.resolveWith(
-      (states) => states.contains(WidgetState.focused)
-          ? const BorderSide(width: 3)
-          : null,
-    );
     return MaterialApp(
       title: 'Green Window',
-      theme: ThemeData(
-        chipTheme: ChipThemeData(side: focusRing),
-        filledButtonTheme: FilledButtonThemeData(
-          style: ButtonStyle(side: focusRing),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: ButtonStyle(side: focusRing),
-        ),
-      ),
+      theme: greenWindowTheme(),
       home: Scaffold(
         body: SafeArea(
           child: Column(
@@ -80,15 +66,22 @@ class _DemoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final compact = isCompact(context);
     return ColoredBox(
-      color: colors.tertiaryContainer,
+      color: slate,
       child: Padding(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 20 : 56,
+          vertical: compact ? 10 : 12,
+        ),
         child: Text(
-          'Demo mode: $mode. This is not live data.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: colors.onTertiaryContainer),
+          'DEMO MODE · ${mode.toUpperCase()} · NOT LIVE DATA',
+          style: TextStyle(
+            color: cobalt,
+            fontSize: compact ? 14 : 18,
+            fontWeight: FontWeight.w500,
+            letterSpacing: compact ? 1.1 : 1.8,
+          ),
         ),
       ),
     );
