@@ -144,6 +144,8 @@ Phases 5 and 6 are independent of each other once Phase 4 is merged.
 
 **Done when:** the live URL works in Chrome, Safari and Firefox, and in each demo mode.
 
+**Outcome (26 Nov 2026):** `data/demo/demo_client.dart` returns `http`'s `MockClient` for each mode, or null (live) for none or an unknown one. `fixture` serves the RG10 fixture for any postcode, freezes the clock at 11:00 UTC on 26 Nov 2026, and stores under `demo.` keys so it never reads or overwrites the live cache. `slow` forwards to the live API. `web/flutter_bootstrap.js` sets `suppressMultithreadingWarning: true`. Checked in Chrome on a release `--wasm` build served under `/green-window/` from a plain static server (`crossOriginIsolated == false`, `main.dart.wasm` loaded, no console warning): the banner and the right message in every mode, and in `slow` a second search shows its result and isn't replaced when the first times out. The live URL, Safari and Firefox are still to check once this is merged and Pages is enabled.
+
 ### Phase 6: design and motion (`phase-6a/theme-layout`, `phase-6b/chart-motion`)
 Built against the [Green Window wireframes](https://claude.ai/artifact/4LLK8xrWzyZCwNnGqoMVRN), PRD §16, and the direction contract in `.impeccable/surfaces/lib-src-ui-green-window-module-dart.md`. Each §9 state has a desktop and a mobile artboard.
 - 6a: the theme from Sanzo Wada no. 271 (colour roles in PRD §16). The first screen holds the inputs as capsule pills and the large start time and day word. Below it are the headline, and the 48-hour line with the window notch along the bottom edge. Every §9 state as drawn.

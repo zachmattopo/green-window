@@ -121,3 +121,18 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 
 **Verified by hand:** *(to complete after review)*
 
+
+## Phase 5: demo mode and hosting
+
+**Used for**
+- Writing the `?demo=` clients, the banner, `main.dart`'s wiring, the custom `flutter_bootstrap.js` and the GitHub Pages workflow.
+- Finding `suppressMultithreadingWarning` in the 3.50.1 web SDK's `flutter.js` before relying on it.
+- Checking every demo mode in Chrome on a release Wasm build served under `/green-window/`, as on Pages.
+
+**Changed or rejected**
+- One `demoClient(mode, live)` built on `http`'s own `MockClient` instead of a hand-written `BaseClient` per mode. All six modes fit in one switch.
+- `slow` forwards to the live API after its delay, so the race shows real data and the fixture clock isn't needed.
+- `fixture` uses its own `demo.` storage keys. Its clock is frozen at 11:00 UTC on 26 Nov 2026, so a live forecast cached later would look newer than "now", skip the fetch and be read at the wrong time. The other modes share the live cache, so stale-on-failure can be shown with them.
+- An unknown mode runs live with no banner, rather than failing.
+
+**Verified by hand:** *(to complete after review)*

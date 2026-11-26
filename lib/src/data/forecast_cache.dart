@@ -15,17 +15,19 @@ typedef LastInputs = ({
 /// Browser storage for the last good forecast per outward code (stored as
 /// the raw API body, re-parsed on read) and the last inputs.
 class ForecastCache {
-  ForecastCache(this._prefs);
+  /// [prefix] keeps `?demo=fixture`'s frozen-clock data apart from live data.
+  ForecastCache(this._prefs, {this._prefix = ''});
 
   final SharedPreferencesAsync _prefs;
+  final String _prefix;
 
   // Storage can be blocked, full or corrupt. The cache is optional, so every
   // storage error is a miss on read and ignored on write, never a failure.
 
   Future<Forecast?> forecast(String outcode) async {
     try {
-      final body = await _prefs.getString('forecast.$outcode');
-      final at = await _prefs.getInt('forecast.$outcode.at');
+      final body = await _prefs.getString('${_prefix}forecast.$outcode');
+      final at = await _prefs.getInt('${_prefix}forecast.$outcode.at');
       if (body == null || at == null) return null;
       return parseForecast(
         body,
@@ -42,9 +44,9 @@ class ForecastCache {
     DateTime fetchedAt,
   ) async {
     try {
-      await _prefs.setString('forecast.$outcode', body);
+      await _prefs.setString('${_prefix}forecast.$outcode', body);
       await _prefs.setInt(
-        'forecast.$outcode.at',
+        '${_prefix}forecast.$outcode.at',
         fetchedAt.millisecondsSinceEpoch,
       );
     } catch (_) {
@@ -54,12 +56,13 @@ class ForecastCache {
 
   Future<LastInputs> inputs() async {
     try {
-      final appliance = await _prefs.getString('inputs.appliance');
-      final readyBy = (await _prefs.getString('inputs.readyBy'))?.split(':');
+      final appliance = await _prefs.getString('${_prefix}inputs.appliance');
+      final readyBy = (await _prefs.getString('${_prefix}inputs.readyBy'))
+          ?.split(':');
       final hour = int.tryParse(readyBy?.first ?? '');
       final minute = int.tryParse(readyBy?.last ?? '');
       return (
-        outcode: await _prefs.getString('inputs.outcode'),
+        outcode: await _prefs.getString('${_prefix}inputs.outcode'),
         appliance: Appliance.values.asNameMap()[appliance],
         readyBy: hour == null || minute == null
             ? null
@@ -73,10 +76,10 @@ class ForecastCache {
   Future<void> saveInputs(LastInputs inputs) async {
     final (:outcode, :appliance, :readyBy) = inputs;
     try {
-      await _set('inputs.outcode', outcode);
-      await _set('inputs.appliance', appliance?.name);
+      await _set('${_prefix}inputs.outcode', outcode);
+      await _set('${_prefix}inputs.appliance', appliance?.name);
       await _set(
-        'inputs.readyBy',
+        '${_prefix}inputs.readyBy',
         readyBy == null ? null : '${readyBy.hour}:${readyBy.minute}',
       );
     } catch (_) {
