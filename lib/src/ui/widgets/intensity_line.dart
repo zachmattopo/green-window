@@ -77,12 +77,6 @@ class IntensityLine extends StatelessWidget {
             ),
             extraLinesData: ExtraLinesData(
               verticalLines: [
-                VerticalLine(
-                  x: 0,
-                  color: slate,
-                  strokeWidth: 2,
-                  dashArray: [2, 4],
-                ),
                 if (deadline case final d?)
                   VerticalLine(
                     x: x(d),
