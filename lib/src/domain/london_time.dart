@@ -35,6 +35,17 @@ String dayLabel(DateTime start, DateTime now) {
   };
 }
 
+/// The Europe/London weekday name of [instant], such as "Friday".
+String weekdayName(DateTime instant) =>
+    _weekdays[toLondon(instant).weekday - 1];
+
+/// The Europe/London time of [instant] in 24-hour format, such as "03:00".
+String clockLabel(DateTime instant) {
+  final t = toLondon(instant);
+  String two(int v) => v.toString().padLeft(2, '0');
+  return '${two(t.hour)}:${two(t.minute)}';
+}
+
 /// The next [hour]:[minute] in Europe/London strictly after [now], as UTC.
 /// A time skipped by the spring clock change moves forward to the next valid
 /// time; in autumn the first occurrence after [now] wins.

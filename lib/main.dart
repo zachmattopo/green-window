@@ -8,6 +8,7 @@ import 'src/data/carbon_intensity_client.dart';
 import 'src/data/forecast_cache.dart';
 import 'src/data/forecast_repository.dart';
 import 'src/ui/green_window_cubit.dart';
+import 'src/ui/green_window_module.dart';
 
 void main() {
   initializeTimeZones();
@@ -29,9 +30,25 @@ class GreenWindowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    // PRD §11: a focus ring keyboard users can see; Material's own overlay
+    // is too faint on chips. Phase 6 restyles it.
+    final focusRing = WidgetStateBorderSide.resolveWith(
+      (states) => states.contains(WidgetState.focused)
+          ? const BorderSide(width: 3)
+          : null,
+    );
+    return MaterialApp(
       title: 'Green Window',
-      home: Scaffold(body: Center(child: Text('Green Window'))),
+      theme: ThemeData(
+        chipTheme: ChipThemeData(side: focusRing),
+        filledButtonTheme: FilledButtonThemeData(
+          style: ButtonStyle(side: focusRing),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: ButtonStyle(side: focusRing),
+        ),
+      ),
+      home: const Scaffold(body: SafeArea(child: GreenWindowModule())),
     );
   }
 }

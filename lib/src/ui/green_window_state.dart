@@ -39,6 +39,7 @@ class GreenWindowState {
     this.outcode,
     this.appliance = Appliance.washingMachine,
     this.readyBy,
+    this.skippedDeadline,
     this.postcodeProblem,
     this.status = const Idle(),
   });
@@ -48,6 +49,9 @@ class GreenWindowState {
   final String? outcode;
   final Appliance appliance;
   final ClockTime? readyBy;
+
+  /// Set by "Plan for {deadline} tomorrow"; see `findGreenWindow`.
+  final DateTime? skippedDeadline;
 
   /// An [InvalidPostcode] or [NotCovered] to show by the field (US-4).
   final PostcodeResult? postcodeProblem;
@@ -65,6 +69,7 @@ class GreenWindowState {
       forecast: forecast,
       appliance: appliance,
       readyBy: readyBy,
+      skippedDeadline: skippedDeadline,
       now: now,
     ),
     null => null,
@@ -76,6 +81,7 @@ class GreenWindowState {
     String? outcode,
     Appliance? appliance,
     ClockTime? Function()? readyBy,
+    DateTime? Function()? skippedDeadline,
     PostcodeResult? Function()? postcodeProblem,
     GreenWindowStatus? status,
   }) => GreenWindowState(
@@ -83,6 +89,9 @@ class GreenWindowState {
     outcode: outcode ?? this.outcode,
     appliance: appliance ?? this.appliance,
     readyBy: readyBy == null ? this.readyBy : readyBy(),
+    skippedDeadline: skippedDeadline == null
+        ? this.skippedDeadline
+        : skippedDeadline(),
     postcodeProblem: postcodeProblem == null
         ? this.postcodeProblem
         : postcodeProblem(),

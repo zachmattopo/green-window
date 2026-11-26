@@ -65,12 +65,15 @@ const _minGrams = 10;
 
 /// Picks the cleanest time to run [appliance] (PRD §8), finishing by the next
 /// [readyBy] in Europe/London if given. Forecast slots must be usable and in
-/// time order; gaps between them are allowed.
+/// time order; gaps between them are allowed. A [skippedDeadline] (a Not
+/// enough time deadline, for "Plan for 07:00 tomorrow") moves the deadline to
+/// the next [readyBy] after it.
 WindowOutcome findGreenWindow({
   required Forecast forecast,
   required Appliance appliance,
   required DateTime now,
   ClockTime? readyBy,
+  DateTime? skippedDeadline,
 }) {
   final runTime = appliance.runTime;
   final n = (runTime.inMinutes / _slot.inMinutes).ceil();
@@ -97,9 +100,12 @@ WindowOutcome findGreenWindow({
   DateTime finishOf(int i) => startOf(i).add(runTime);
 
   final forecastEnd = ahead.last.to;
+  // An hour on, so the repeated 01:30 when the clocks go back is skipped too.
+  final skipTo = skippedDeadline?.add(const Duration(hours: 1));
+  final from = skipTo != null && skipTo.isAfter(now) ? skipTo : now;
   final deadline = readyBy == null
       ? null
-      : nextReadyBy(readyBy.hour, readyBy.minute, now);
+      : nextReadyBy(readyBy.hour, readyBy.minute, from);
   final capped = deadline != null && deadline.isAfter(forecastEnd);
   final limit = deadline == null || capped ? forecastEnd : deadline;
 

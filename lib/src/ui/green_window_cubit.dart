@@ -59,8 +59,21 @@ class GreenWindowCubit extends Cubit<GreenWindowState> {
 
   /// A null [readyBy] clears the deadline.
   void setReadyBy(ClockTime? readyBy) {
-    emit(state.copyWith(now: _now(), readyBy: () => readyBy));
+    emit(
+      state.copyWith(
+        now: _now(),
+        readyBy: () => readyBy,
+        skippedDeadline: () => null,
+      ),
+    );
     unawaited(_saveInputs());
+  }
+
+  /// "Plan for {deadline} tomorrow" (PRD §8.5).
+  void planForTomorrow() {
+    if (state.outcome case NotEnoughTime(:final deadline)) {
+      emit(state.copyWith(now: _now(), skippedDeadline: () => deadline));
+    }
   }
 
   Future<void> retry() async {
