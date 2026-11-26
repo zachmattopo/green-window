@@ -95,6 +95,7 @@ class GreenWindowCubit extends Cubit<GreenWindowState> {
       emit(state.copyWith(now: _now(), outcode: outcode, status: Ready(held)));
       return;
     }
+
     emit(
       state.copyWith(
         now: _now(),
@@ -102,8 +103,11 @@ class GreenWindowCubit extends Cubit<GreenWindowState> {
         status: held == null ? const Loading() : Ready(held, refreshing: true),
       ),
     );
+    
     try {
       final fresh = await _repository.fetch(outcode, now: _now());
+      // Same rule as the cache: an empty forecast never hides the last good one.
+      if (fresh.slots.isEmpty && held != null) throw const ParseFailure();
       if (superseded()) return;
       emit(state.copyWith(now: _now(), status: Ready(fresh)));
     } on ForecastFailure catch (failure) {

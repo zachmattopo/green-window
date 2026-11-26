@@ -99,5 +99,6 @@ How AI (Claude Code) was used on this project, and what I kept, changed or rejec
 - A cached forecast is shown only if `findGreenWindow` finds a window in it for the current appliance (PRD §10, enough future slots); otherwise it's treated as no cache.
 - The minute tick skips refetching while a request is in flight. Otherwise a tick during a new search could start a fetch for the old area and win the latest-request race.
 - `BlocProvider` is `lazy: false`; by default `restore()` wouldn't run until something reads the Cubit.
+- A self-review found that a refresh returning no usable slots replaced a good result with "No forecast" for 30 minutes. It now shows the error with the last good forecast, as the cache already does.
 
 **Verified by hand:** *(to complete after review)*
