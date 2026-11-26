@@ -103,7 +103,7 @@ class GreenWindowCubit extends Cubit<GreenWindowState> {
         status: held == null ? const Loading() : Ready(held, refreshing: true),
       ),
     );
-    
+
     try {
       final fresh = await _repository.fetch(outcode, now: _now());
       // Same rule as the cache: an empty forecast never hides the last good one.
