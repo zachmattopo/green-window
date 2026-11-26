@@ -29,7 +29,7 @@ fvm flutter test
 
 - Trunk-based: one small PR per phase into `main`, at most about 1,000 added lines (excluding `pubspec.lock`).
 - `lib/src/domain/` is pure Dart: no Flutter imports, no I/O. That is where the logic and most of the tests live.
-- Read the time with `clock.now()` (package `clock`), never `DateTime.now()`, so tests can fix the time.
+- Time is passed in, never read globally. Domain functions take `now` as a parameter. The Cubit gets a `DateTime Function() now` through its constructor. Only `main.dart` passes `DateTime.now`. No `withClock` or zones: they break `?demo=fixture` if Flutter's binding starts outside the zone.
 - Every time shown to a user is converted to Europe/London explicitly, never with `toLocal()`.
 - No code generation (no freezed, json_serializable or injectable). Use sealed classes and hand-written `fromJson`.
 - Add an entry to [docs/AI_LOG.md](docs/AI_LOG.md) in each PR: what AI produced, what was changed or rejected, and why.
