@@ -5,6 +5,16 @@ Flutter Web app (built for Wasm) that tells you when to start an appliance so it
 - Product spec: [docs/PRD.md](docs/PRD.md). Phased plan: [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 - Flutter is pinned with fvm (`.fvmrc`, 3.50.1). Always run `fvm flutter …` and `fvm dart …`, never the global SDK.
 
+## Architecture
+
+Three layers under `lib/src/`. Data flows one way: UI → Cubit → Repository → Client/Cache.
+
+- `domain/`: pure logic and models: postcode parsing, London time, and `findGreenWindow`, which picks the cleanest window.
+- `data/`: the Carbon Intensity HTTP client (timeouts, retries, failure mapping), a tolerant JSON parser, the `shared_preferences` cache, and the repository that combines them. Demo-mode clients live in `data/demo/`.
+- `ui/`: a single `GreenWindowCubit` and the module's widgets. The Cubit runs `findGreenWindow` on the forecast it holds, so changing the appliance or ready-by time doesn't trigger a fetch.
+
+Dependencies are passed in through constructors and wired in `main.dart`. There's no DI container.
+
 ## Rule: before ending a response that modified code
 
 Run all three, in this order, every time, even for a one-line change. Fix anything they report before finishing, and state the results in the response.
