@@ -14,7 +14,7 @@ You enter a postcode, pick an appliance and, optionally, a "ready by" time. The 
 
 ## Track and API
 
-I took the brief's "bring your own API" route and chose the [Carbon Intensity API](https://carbonintensity.org.uk/) from the National Energy System Operator (NESO). It is free, keyless, CORS-enabled and official, and it returns a 48-hour, half-hourly forecast for a region from an outward postcode. In spirit it is closest to Track 01: a live module about a physical system that changes by the hour.
+I took the brief's "bring your own API" route and chose the [Carbon Intensity API](https://carbonintensity.org.uk/) (specifically this [GET API](https://carbon-intensity.github.io/api-definitions/#get-regional-intensity-from-fw48h-postcode-postcode)) from the National Energy System Operator (NESO). It is free, keyless, CORS-enabled and official, and it returns a 48-hour, half-hourly forecast for a region from an outward postcode. In spirit it is closest to Track 01: a live module about a physical system that changes by the hour.
 
 I chose it for three reasons:
 - **The data supports a real decision.** On 25 Nov 2026 the national forecast for the next 48 hours ranged from 64 to 192 gCO2/kWh, while South Wales read 374 and South Scotland 0 at the same moment. The time you run a washing machine makes a real difference, but nobody does that arithmetic themselves.
